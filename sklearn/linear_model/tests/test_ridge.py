@@ -31,6 +31,7 @@ from sklearn.linear_model._ridge import (
     _X_CenterStackOp,
 )
 from sklearn.metrics import get_scorer, make_scorer, mean_squared_error
+from sklearn.metrics.tests.test_score_objects import CLF_SCORERS, REGRESSION_SCORERS
 from sklearn.model_selection import (
     GridSearchCV,
     GroupKFold,
@@ -2098,6 +2099,40 @@ def test_metadata_routing_with_default_scoring(metaestimator):
     argument (`None`), don't enter into `RecursionError` when metadata is routed.
     """
     metaestimator().get_metadata_routing()
+
+
+@pytest.mark.usefixtures("enable_slep006")
+@pytest.mark.parametrize("scoring", REGRESSION_SCORERS)
+def test_RidgeCV_metadata_routing_with_scoring_string(scoring):
+    """Test that `RidgeCV` with string `scoring` argument works with metadata
+    routing."""
+    X = np.array([[0, 1], [2, 2], [4, 6], [9, 0], [2, 4]])
+    y = [1, 2, 3, 4, 5]
+    params = {"sample_weight": [1, 1, 1, 1, 1]}
+
+    est = (
+        RidgeCV(scoring=scoring)
+        .set_fit_request(sample_weight=True)
+        .set_score_request(sample_weight=True)
+    )
+    est.fit(X, y, **params)
+
+
+@pytest.mark.usefixtures("enable_slep006")
+@pytest.mark.parametrize("scoring", CLF_SCORERS)
+def test_RidgeClassifierCV_metadata_routing_with_scoring_string(scoring):
+    """Test that `RidgeClassifierCV` with string `scoring` argument works with metadata
+    routing."""
+    X = np.array([[0, 1], [2, 2], [4, 6], [9, 0], [2, 4]])
+    y = [1, 2, 3, 4, 5]
+    params = {"sample_weight": [1, 1, 1, 1, 1]}
+
+    est = (
+        RidgeClassifierCV(scoring=scoring)
+        .set_fit_request(sample_weight=True)
+        .set_score_request(sample_weight=True)
+    )
+    est.fit(X, y, **params)
 
 
 # End of Metadata Routing Tests
