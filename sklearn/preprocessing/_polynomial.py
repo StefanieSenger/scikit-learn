@@ -1102,8 +1102,37 @@ class SplineTransformer(TransformerMixin, BaseEstimator):
                     # structure of a csr_matrix is expensive. lil_matrix is more
                     # efficient.
                     if np.any(mask_inv):
-                        XBS_sparse = XBS_sparse.tolil()
-                        XBS_sparse[mask_inv, :] = 0
+                        ##### this code works in some cases, but fails with segmentation
+                        # error when first or last indptr elements need to be converted
+                        # into 0
+                        ##### improve: conversion to csr type, to make sure data is of
+                        # correct sparse type
+                        # find indptr to data to be removed (removed data become 0s)
+                        index_start = XBS_sparse.indptr[:-1][mask_inv]
+                        index_stop = XBS_sparse.indptr[1:][mask_inv]
+                        # make start-stop tuples for slicing
+                        index_tuples = list(zip(index_start, index_stop))
+                        index_slices = [
+                            slice(index_tuples[i][0], index_tuples[i][1])
+                            for i in range(len(index_tuples))
+                        ]
+                        # modify data and indices
+                        XBS_sparse.data = np.delete(
+                            XBS_sparse.data, np.r_[tuple(index_slices)]
+                        )
+                        XBS_sparse.indices = np.delete(
+                            XBS_sparse.indices, np.r_[tuple(index_slices)]
+                        )
+                        # adjust indptr to new data
+                        XBS_sparse.indptr[:-1][mask_inv] = index_start
+                        XBS_sparse.indptr[1:][
+                            mask_inv
+                        ] = index_start  ##### improve: move all the
+                        # remaining indptr not just the next one
+                        XBS_sparse.indptr[-1] -= sum(index_stop - index_start)
+
+                        # XBS_sparse = XBS_sparse.tolil()
+                        # XBS_sparse[mask_inv, :] = 0
 
                 else:
                     XBS[mask, (i * n_splines) : ((i + 1) * n_splines)] = spl(X[mask, i])
