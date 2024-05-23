@@ -763,6 +763,8 @@ class SplineTransformer(TransformerMixin, BaseEstimator):
 
             if sample_weight is None:
                 knots = np.nanpercentile(X, percentiles, axis=0)
+                if np.isnan(knots.any()):
+                    knots = np.nan_to_num(knots)
             else:
                 # TODO: exclude possible nan values from _weighted_percentile:
                 if np.any(_get_mask(X, np.nan)):
@@ -786,6 +788,11 @@ class SplineTransformer(TransformerMixin, BaseEstimator):
             mask = slice(None, None, 1) if sample_weight is None else sample_weight > 0
             x_min = np.nanmin(X[mask], axis=0)
             x_max = np.nanmax(X[mask], axis=0)
+            # if a whole feature is a column of nans, both x_min and x_max contain nan
+            # and we need to make sure that the knots don't contain any nans:
+            if np.isnan(x_min.any()):
+                x_min = np.nan_to_num(x_min)
+                x_max = np.nan_to_num(x_max)
 
             knots = np.linspace(
                 start=x_min,
@@ -1052,7 +1059,7 @@ class SplineTransformer(TransformerMixin, BaseEstimator):
                     # input data when doing inplace operations.
                     x = x.copy()
                     # We replace the nan values in the input column by some
-                    # arbitrary, in-range, numerical value since 
+                    # arbitrary, in-range, numerical value since
                     # BSpline.design_matrix() would otherwise raise on any nan
                     # value in its input. The spline encoded values in
                     # the output of that function that correspond to missing
@@ -1070,7 +1077,7 @@ class SplineTransformer(TransformerMixin, BaseEstimator):
                         # The column is all np.nan valued. Replace it by a constant
                         # column with an arbitrary non-nan value inside: the minimum
                         # value within the whole feature space:
-                        x[:] = np.nanmin(X)
+                        x[:] = 0
                     else:
                         x[nan_indicator] = nanmin_x
                     XBS_sparse = BSpline.design_matrix(
