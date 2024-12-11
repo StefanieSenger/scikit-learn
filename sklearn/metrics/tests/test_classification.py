@@ -1142,7 +1142,7 @@ def test_confusion_matrix_multiclass_subset_labels():
 @pytest.mark.parametrize(
     "labels, err_msg",
     [
-        ([], "'labels' should contains at least one label."),
+        ([], "'labels' should contain at least one label."),
         ([3, 4], "At least one label specified must be in y_true"),
     ],
     ids=["empty list", "unknown labels"],

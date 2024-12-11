@@ -343,11 +343,13 @@ def confusion_matrix(
 
     if labels is None:
         labels = unique_labels(y_true, y_pred)
+        if y_true.size == 0:
+            return np.zeros((0, 0), dtype=int)
     else:
         labels = np.asarray(labels)
         n_labels = labels.size
         if n_labels == 0:
-            raise ValueError("'labels' should contains at least one label.")
+            raise ValueError("'labels' should contain at least one label.")
         elif y_true.size == 0:
             return np.zeros((n_labels, n_labels), dtype=int)
         elif len(np.intersect1d(y_true, labels)) == 0:
@@ -360,6 +362,26 @@ def confusion_matrix(
 
     check_consistent_length(y_true, y_pred, sample_weight)
 
+    # We broadcast to get occurrences and indices per label (from `labels`) in `y_pred`
+    # and `y_true
+    y_true_mask = y_true.reshape(y_true.shape[0], -1) == labels
+    indices_labeled_y_true = np.nonzero(y_true_mask.any(axis=1))[0]
+    y_pred_mask = y_pred.reshape(y_pred.shape[0], -1) == labels
+    indices_labeled_y_pred = np.nonzero(y_pred_mask.any(axis=1))[0]
+
+    mask_y_pred = np.isin(np.arange(y_pred.shape[0]), indices_labeled_y_pred)
+    mask_y_true = np.isin(np.arange(y_true.shape[0]), indices_labeled_y_true)
+
+    joint_index_mask = np.logical_and(mask_y_pred, mask_y_true)
+
+    y_pred = y_pred[joint_index_mask]
+    y_true = y_true[joint_index_mask]
+    sample_weight = sample_weight[joint_index_mask]
+
+    # print(f"y_true: {y_true}")
+    # print(f"y_pred: {y_pred}")
+    # print(f"sample_weight: {sample_weight}")
+
     n_labels = labels.size
     # If labels are not consecutive integers starting from zero, then
     # y_true and y_pred must be converted into index form
@@ -370,17 +392,18 @@ def confusion_matrix(
         and y_pred.min() >= 0
     )
     if need_index_conversion:
-        label_to_ind = {y: x for x, y in enumerate(labels)}
-        y_pred = np.array([label_to_ind.get(x, n_labels + 1) for x in y_pred])
-        y_true = np.array([label_to_ind.get(x, n_labels + 1) for x in y_true])
-
-    # intersect y_pred, y_true with labels, eliminate items not in labels
-    ind = np.logical_and(y_pred < n_labels, y_true < n_labels)
-    if not np.all(ind):
-        y_pred = y_pred[ind]
-        y_true = y_true[ind]
-        # also eliminate weights of eliminated items
-        sample_weight = sample_weight[ind]
+        # print('OH yes!!! We need_index_conversion!!!')
+        # print(f'labels: {labels}')
+        sorted_label_indices = np.argsort(labels)
+        sorted_labels = labels[sorted_label_indices]
+        converted_label_indices = np.arange(labels.size)
+        # print(f"converted_indices: {converted_label_indices}")
+        sorted_converted_indices = converted_label_indices[sorted_label_indices]
+        y_true = sorted_converted_indices[np.searchsorted(sorted_labels, y_true)]
+        y_pred = sorted_converted_indices[np.searchsorted(sorted_labels, y_pred)]
+        # print(f"y_true_converted: {y_true}")
+        # print(f"y_pred_converted: {y_pred}")
+    # print('')
 
     # Choose the accumulator dtype to always have high precision
     if sample_weight.dtype.kind in {"i", "u", "b"}:
