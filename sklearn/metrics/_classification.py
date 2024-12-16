@@ -370,9 +370,68 @@ def confusion_matrix(
         and y_pred.min() >= 0
     )
     if need_index_conversion:
-        label_to_ind = {y: x for x, y in enumerate(labels)}
+        """label_to_ind = {y: x for x, y in enumerate(labels)}
         y_pred = np.array([label_to_ind.get(x, n_labels + 1) for x in y_pred])
-        y_true = np.array([label_to_ind.get(x, n_labels + 1) for x in y_true])
+        y_true = np.array([label_to_ind.get(x, n_labels + 1) for x in y_true])"""
+
+        # first version
+        sorted_labels = labels[np.argsort(labels)]
+        converted_labels = np.arange(labels.size)
+        sorted_converted_labels = converted_labels[np.argsort(labels)]
+        y_true = sorted_converted_labels[np.searchsorted(sorted_labels, y_true)]
+        y_pred = sorted_converted_labels[np.searchsorted(sorted_labels, y_pred)]
+
+        # new version
+        label_values, label_indices = np.unique_inverse(labels)
+        mapping = dict(zip(label_values, label_indices))
+        # y_true = np.where(np.isin(y_true, label_values), np.where(y_true == 2, 0, 1),
+        # n_labels + 1)
+        y_true = np.where(
+            np.isin(y_true, label_values),
+            np.array([mapping[val] for val in y_true]),
+            n_labels + 1,
+        )
+        y_pred = np.where(
+            np.isin(y_pred, label_values),
+            np.array([mapping[val] for val in y_pred]),
+            n_labels + 1,
+        )
+        y_pred = np.array([mapping.get(x, n_labels + 1) for x in y_pred])
+        y_true = np.array([mapping.get(x, n_labels + 1) for x in y_true])
+
+        # last attempt: doesn't work for strings
+        label_values, label_indices = np.unique_inverse(labels)
+
+        matches = y_pred[:, None] == label_values
+        result = np.full_like(y_pred, n_labels + 1)
+        matched_indices = (
+            matches @ label_indices
+        )  # Matrix multiplication selects replacement values
+        result[np.any(matches, axis=1)] = matched_indices[np.any(matches, axis=1)]
+        y_pred = result
+
+        matches = y_true[:, None] == label_values
+        result = np.full_like(y_true, n_labels + 1)
+        matched_indices = (
+            matches @ label_indices
+        )  # Matrix multiplication selects replacement values
+        result[np.any(matches, axis=1)] = matched_indices[np.any(matches, axis=1)]
+        y_true = result
+
+        # very last attempt
+        label_values, label_indices = np.unique_inverse(labels)
+        all_values, y_pred_mapped = np.unique(y_pred, return_inverse=True)
+        _, label_values_mapped = np.unique(label_values, return_inverse=True)
+        mapping = np.full(len(all_values), len(label_indices) + 1, dtype=int)
+        mapping[label_values_mapped] = label_indices
+        y_pred = mapping[y_pred_mapped]
+
+        label_values, label_indices = np.unique_inverse(labels)
+        all_values, y_true_mapped = np.unique(y_true, return_inverse=True)
+        _, label_values_mapped = np.unique(label_values, return_inverse=True)
+        mapping = np.full(len(all_values), len(label_indices) + 1, dtype=int)
+        mapping[label_values_mapped] = label_indices
+        y_true = mapping[y_true_mapped]
 
     # intersect y_pred, y_true with labels, eliminate items not in labels
     ind = np.logical_and(y_pred < n_labels, y_true < n_labels)
