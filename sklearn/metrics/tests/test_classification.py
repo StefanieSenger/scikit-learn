@@ -737,6 +737,7 @@ def test_likelihood_ratios_errors(params, err_msg):
     # non-binary classes to avoid Simpson's paradox
     with pytest.raises(ValueError, match=err_msg):
         class_likelihood_ratios(**params)
+    print("test")
 
 
 def test_likelihood_ratios():
