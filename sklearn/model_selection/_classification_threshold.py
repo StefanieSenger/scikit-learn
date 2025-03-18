@@ -400,7 +400,7 @@ class FixedThresholdClassifier(BaseThresholdClassifier):
         """
         router = MetadataRouter(owner=self.__class__.__name__).add(
             estimator=self.estimator,
-            method_mapping=MethodMapping().add(callee="fit", caller="fit"),
+            method_mapping=MethodMapping().add(caller="fit", callee="fit"),
         )
         return router
 
@@ -872,15 +872,15 @@ class TunedThresholdClassifierCV(BaseThresholdClassifier):
             MetadataRouter(owner=self.__class__.__name__)
             .add(
                 estimator=self.estimator,
-                method_mapping=MethodMapping().add(callee="fit", caller="fit"),
+                method_mapping=MethodMapping().add(caller="fit", callee="fit"),
             )
             .add(
                 splitter=self.cv,
-                method_mapping=MethodMapping().add(callee="split", caller="fit"),
+                method_mapping=MethodMapping().add(caller="fit", callee="split"),
             )
             .add(
                 scorer=self._get_curve_scorer(),
-                method_mapping=MethodMapping().add(callee="score", caller="fit"),
+                method_mapping=MethodMapping().add(caller="fit", callee="score"),
             )
         )
         return router

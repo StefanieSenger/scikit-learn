@@ -187,7 +187,7 @@ class _BaseVoting(TransformerMixin, _BaseHeterogeneousEnsemble):
         for name, estimator in self.estimators:
             router.add(
                 **{name: estimator},
-                method_mapping=MethodMapping().add(callee="fit", caller="fit"),
+                method_mapping=MethodMapping().add(caller="fit", callee="fit"),
             )
         return router
 

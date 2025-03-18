@@ -607,13 +607,13 @@ class SelfTrainingClassifier(ClassifierMixin, MetaEstimatorMixin, BaseEstimator)
             estimator=self.estimator,
             method_mapping=(
                 MethodMapping()
-                .add(callee="fit", caller="fit")
-                .add(callee="score", caller="fit")
-                .add(callee="predict", caller="predict")
-                .add(callee="predict_proba", caller="predict_proba")
-                .add(callee="decision_function", caller="decision_function")
-                .add(callee="predict_log_proba", caller="predict_log_proba")
-                .add(callee="score", caller="score")
+                .add(caller="fit", callee="fit")
+                .add(caller="fit", callee="score")
+                .add(caller="predict", callee="predict")
+                .add(caller="predict_proba", callee="predict_proba")
+                .add(caller="decision_function", callee="decision_function")
+                .add(caller="predict_log_proba", callee="predict_log_proba")
+                .add(caller="score", callee="score")
             ),
         )
         return router

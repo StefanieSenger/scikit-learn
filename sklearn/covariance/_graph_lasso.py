@@ -1135,6 +1135,6 @@ class GraphicalLassoCV(BaseGraphicalLasso):
         """
         router = MetadataRouter(owner=self.__class__.__name__).add(
             splitter=check_cv(self.cv),
-            method_mapping=MethodMapping().add(callee="split", caller="fit"),
+            method_mapping=MethodMapping().add(caller="fit", callee="split"),
         )
         return router

@@ -617,7 +617,7 @@ class BaseBagging(BaseEnsemble, metaclass=ABCMeta):
         router = MetadataRouter(owner=self.__class__.__name__)
         router.add(
             estimator=self._get_estimator(),
-            method_mapping=MethodMapping().add(callee="fit", caller="fit"),
+            method_mapping=MethodMapping().add(caller="fit", callee="fit"),
         )
         return router
 

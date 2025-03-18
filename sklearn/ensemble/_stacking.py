@@ -404,7 +404,7 @@ class _BaseStacking(TransformerMixin, _BaseHeterogeneousEnsemble, metaclass=ABCM
         for name, estimator in self.estimators:
             router.add(
                 **{name: estimator},
-                method_mapping=MethodMapping().add(callee="fit", caller="fit"),
+                method_mapping=MethodMapping().add(caller="fit", callee="fit"),
             )
 
         try:
