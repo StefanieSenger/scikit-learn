@@ -570,7 +570,7 @@ def test_get_namespace_and_device():
         namespace, is_array_api, device = get_namespace_and_device(some_torch_tensor)
         assert namespace is xp_torch
         assert is_array_api
-        assert device == some_torch_tensor.device
+        assert device == some_torch_tensor.device.type
 
 
 @pytest.mark.parametrize(

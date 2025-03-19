@@ -155,7 +155,11 @@ def _single_array_device(array):
     ):
         return None
     else:
-        return array.device
+        try:
+            # torch stores the device-string in the type attribute
+            return array.device.type
+        except AttributeError:
+            return array.device
 
 
 def device(*array_list, remove_none=True, remove_types=(str,)):
