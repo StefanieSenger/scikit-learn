@@ -352,9 +352,9 @@ class RouterConsumerClassifier(MetaEstimatorMixin, ClassifierMixin, BaseEstimato
 
     def get_metadata_routing(self):
         router = (
-            MetadataRouter(owner=self.__class__.__name__)
+            MetadataRouter(owner=self.__class__.__name__, obj=self)
             # defining metadata routing request values for usage in the meta-estimator
-            .add_self_request(self)
+            # .add_self_request(self)
             # defining metadata routing request values for usage in a sub-estimator
             .add(
                 estimator=self.estimator,

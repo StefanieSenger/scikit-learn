@@ -818,8 +818,8 @@ class MetadataRouter:
 
     Parameters
     ----------
-    owner : str
-        The name of the object to which these requests belong.
+    owner : object
+        The object to which these requests belong.
     """
 
     # this is here for us to use this attribute's value instead of doing
@@ -827,14 +827,16 @@ class MetadataRouter:
     # this file instead of using it directly from scikit-learn.
     _type = "metadata_router"
 
-    def __init__(self, owner):
+    def __init__(self, owner, obj=None):
         self._route_mappings = dict()
         # `_self_request` is used if the router is also a consumer.
         # _self_request, (added using `add_self_request()`) is treated
         # differently from the other consumer objects which are stored in
         # _route_mappings.
-        self._self_request = None
+        # self._self_request = None
         self.owner = owner
+        self.owning_obj = obj
+        self._self_request = self.add_self_request(obj)
 
     def add_self_request(self, obj):
         """Add `self` (as a :term:`consumer`) to the `MetadataRouter`.
@@ -1077,7 +1079,7 @@ class MetadataRouter:
                     res[name][_callee] = router._route_params(
                         params=params,
                         method=_callee,
-                        parent=self.owner,
+                        parent=self.owner.__class__.__name__,
                         caller=caller,
                     )
         return res
