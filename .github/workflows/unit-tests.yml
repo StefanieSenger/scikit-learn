@@ -74,18 +74,17 @@ jobs:
           path: ${{ github.workspace }}/ccache
           key: ${{ runner.os }}-ccache-
 
-      - name: Build scikit-learn
-        run: bash -l build_tools/azure/install.sh
-
       # - name: Build scikit-learn
-      #   run: |
-      #     bash -l build_tools/azure/install.sh
-      #     echo "Print which ccache:"
-      #     which ccache
-      #     echo "Print \$PATH:"
-      #     $PATH
-      #     echo "show ccache statistics:"
-      #     ccache --show-stats
+      #   run: bash -l build_tools/azure/install.sh
+
+      - name: Build with ccache logging
+        run: |
+          export CCACHE_LOGFILE=/tmp/ccache.log
+          ccache -z
+          bash -l build_tools/azure/install.sh
+          echo "=== CCACHE LOG START ==="
+          cat /tmp/ccache.log
+          echo "=== CCACHE LOG END ==="
 
       - name: Run tests
         run: bash -l build_tools/azure/test_script.sh
