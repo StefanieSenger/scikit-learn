@@ -5,6 +5,7 @@ permissions:
 on:
   push:
   pull_request:
+    types: [opened, synchronize]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -74,11 +75,14 @@ jobs:
           key: ${{ runner.os }}-ccache-
 
       - name: Build scikit-learn
-        run: bash -l build_tools/azure/install.sh
-
-      # for debugging
-      - name: show ccache statistics
-        run: ccache --show-stats
+        run: |
+          bash -l build_tools/azure/install.sh
+          echo "Print which ccache:"
+          which ccache
+          echo "Print $PATH:"
+          $PATH
+          echo "show ccache statistics:"
+          ccache --show-stats
 
       - name: Run tests
         run: bash -l build_tools/azure/test_script.sh
