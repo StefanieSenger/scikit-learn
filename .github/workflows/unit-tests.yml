@@ -5,7 +5,7 @@ permissions:
 on:
   push:
   pull_request:
-    types: [opened, synchronize]
+    #types: [opened, synchronize]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -80,7 +80,6 @@ jobs:
       - name: Build with ccache logging
         run: |
           export CCACHE_LOGFILE=/tmp/ccache.log
-          ccache -z
           bash -l build_tools/azure/install.sh
           echo "=== CCACHE LOG START ==="
           cat /tmp/ccache.log
