@@ -54,7 +54,7 @@ if [[ "$COVERAGE" == "true" ]]; then
     if [[ "$HAS_SYSMON" == "True" ]]; then
         export COVERAGE_CORE=sysmon
     fi
-    TEST_CMD="$TEST_CMD --cov-config='$COVERAGE_PROCESS_START' --cov sklearn --cov-report="
+    TEST_CMD="$TEST_CMD --cov-config='$COVERAGE_PROCESS_START' --cov=sklearn --cov-report="
 fi
 
 if [[ "$PYTEST_XDIST_VERSION" != "none" ]]; then
