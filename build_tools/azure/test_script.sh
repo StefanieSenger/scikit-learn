@@ -30,9 +30,8 @@ if [[ "$COMMIT_MESSAGE" =~ \[float32\] ]]; then
     export SKLEARN_RUN_FLOAT32_TESTS=1
 fi
 
-mkdir -p $TEST_DIR
-cp pyproject.toml $TEST_DIR
-cd $TEST_DIR
+# set variable to path to .coveragerc file here to work around needing an azure variable
+#export COVERAGE_PROCESS_START="$PWD/.coveragerc"
 
 python -c "import joblib; print(f'Number of cores (physical): \
 {joblib.cpu_count()} ({joblib.cpu_count(only_physical_cores=True)})')"
@@ -48,7 +47,8 @@ if [[ "$COVERAGE" == "true" ]]; then
     # web report across all the platforms so there is no need for this text
     # report that otherwise hides the test failures and forces long scrolls in
     # the CI logs.
-    export COVERAGE_PROCESS_START="$BUILD_SOURCESDIRECTORY/.coveragerc"
+    #export COVERAGE_PROCESS_START="$BUILD_SOURCESDIRECTORY/.coveragerc"
+    export COVERAGE_PROCESS_START="$PWD/.coveragerc"
 
     # Use sys.monitoring to make coverage faster for Python >= 3.12
     HAS_SYSMON=$(python -c 'import sys; print(sys.version_info >= (3, 12))')
@@ -85,6 +85,10 @@ if [[ "$DISTRIB" == "conda-free-threaded" ]]; then
 fi
 
 TEST_CMD="$TEST_CMD --pyargs sklearn"
+
+mkdir -p $TEST_DIR
+cp pyproject.toml $TEST_DIR
+cd $TEST_DIR
 
 set -x
 eval "$TEST_CMD"
