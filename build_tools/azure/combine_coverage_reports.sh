@@ -15,4 +15,5 @@ coverage xml
 popd
 
 # Copy the combined coverage file to the root of the repository:
-cp $TEST_DIR/coverage.xml $BUILD_REPOSITORY_LOCALPATH
+#cp $TEST_DIR/coverage.xml $BUILD_REPOSITORY_LOCALPATH
+cp $TEST_DIR/coverage.xml .
