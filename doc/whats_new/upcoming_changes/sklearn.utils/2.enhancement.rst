@@ -1,0 +1,2 @@
+Fake changelog entry.
+:issue:`2` by :user:`Stefanie Senger <StefanieSenger>`.
