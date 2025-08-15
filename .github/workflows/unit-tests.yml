@@ -14,12 +14,13 @@ env:
   VIRTUALENV: testvenv
   TEST_DIR: ${{ github.workspace }}/tmp_folder
   CCACHE_DIR: ${{ github.workspace }}/ccache
+  COVERAGE: 'true'
 
 jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    if: github.repository == 'scikit-learn/scikit-learn'
+    #if: github.repository == 'scikit-learn/scikit-learn'
 
     steps:
       - name: Checkout
@@ -43,7 +44,7 @@ jobs:
   unit-tests:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    if: github.repository == 'scikit-learn/scikit-learn'
+    #if: github.repository == 'scikit-learn/scikit-learn'
     needs: [lint]
     strategy:
       # Ensures that all builds run to completion even if one of them fails
@@ -80,3 +81,13 @@ jobs:
 
       - name: Run tests
         run: bash -l build_tools/azure/test_script.sh
+
+      - name: Combine coverage reports
+        run: bash -l build_tools/azure/combine_coverage_reports.sh
+        if: ${{ env.COVERAGE == 'true' }}
+
+      - name: Upload coverage report to Codecov
+        uses: codecov/codecov-action@v5
+        if: ${{ env.COVERAGE == 'true' }} # also condition on that SELECTED_TESTS is empty?
+        with:
+          files: coverage.xml
