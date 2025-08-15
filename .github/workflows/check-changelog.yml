@@ -39,17 +39,16 @@ jobs:
           BOT_USERNAME: changelog-bot
 
       - name: Post changelog help link
-        if: always() && github.repository == 'scikit-learn/scikit-learn' && steps.tests_changed.outputs.check_changelog == 'true'
+        #if: always() && github.repository == 'scikit-learn/scikit-learn' && steps.tests_changed.outputs.check_changelog == 'true'
+        if: always() && steps.tests_changed.outputs.check_changelog == 'true'
         uses: actions/github-script@v7
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             github.repos.createCommitStatus({
-              owner: context.repo.owner,
-              repo: context.repo.name,
               sha: context.payload.pull_request.head.sha,
               state: "failure",
               context: "Changelog missing",
-              description: "A reviewer will let you know if it's required — click here for instructions",
+              description: "A reviewer will let you know if it's required. Click here for changelog instructions.",
               target_url: "https://github.com/scikit-learn/scikit-learn/blob/main/CONTRIBUTING.md#changelog"
             })
