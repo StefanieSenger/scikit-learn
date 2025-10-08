@@ -1153,3 +1153,7 @@ def test_array_api_error_and_warnings_on_unsupported_params():
     with pytest.warns(UserWarning, match=expected_msg):
         with config_context(array_api_dispatch=True):
             pca.fit(iris_xp)
+
+
+def test_touch_test_file_so_changelog_entry_is_needed():
+    pass
