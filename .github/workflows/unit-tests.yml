@@ -5,6 +5,7 @@ permissions:
 on:
   push:
   pull_request:
+    #types: [opened, synchronize]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.head_ref || github.run_id }}
@@ -20,7 +21,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    if: github.repository == 'scikit-learn/scikit-learn'
+    #if: github.repository == 'scikit-learn/scikit-learn'
 
     steps:
       - name: Checkout
@@ -44,7 +45,7 @@ jobs:
   unit-tests:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
-    if: github.repository == 'scikit-learn/scikit-learn'
+    #if: github.repository == 'scikit-learn/scikit-learn'
     needs: [lint]
     strategy:
       # Ensures that all builds run to completion even if one of them fails
@@ -83,8 +84,29 @@ jobs:
           auto-activate-base: true
           activate-environment: ""
 
-      - name: Build scikit-learn
-        run: bash -l build_tools/azure/install.sh
+      - name: Set compiler ID
+        id: get-compiler
+        run: echo "compiler=$(cc --version | head -n 1 | tr ' ' '_' | tr -d '()')" >> $GITHUB_OUTPUT
+
+      - name: Create cache for ccache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/ccache
+          key: ccache-${{ runner.os }}-${{ steps.get-compiler.outputs.compiler }}
+          restore-keys: |
+            ccache-${{ runner.os }}-
+            ccache-
+
+      # - name: Build scikit-learn
+      #   run: bash -l build_tools/azure/install.sh
+
+      - name: Build with ccache logging
+        run: |
+          export CCACHE_LOGFILE=/tmp/ccache.log
+          bash -l build_tools/azure/install.sh
+          echo "=== CCACHE LOG START ==="
+          cat /tmp/ccache.log
+          echo "=== CCACHE LOG END ==="
 
       - name: Run tests
         run: bash -l build_tools/azure/test_script.sh
