@@ -29,6 +29,7 @@ from sklearn.base import (
     clone,
     is_classifier,
 )
+from sklearn.callback import CallbackSupportMixin
 from sklearn.exceptions import NotFittedError
 from sklearn.metrics import check_scoring
 from sklearn.metrics._scorer import (
@@ -437,7 +438,9 @@ def _yield_masked_array_for_each_param(candidate_params):
         yield (key, ma)
 
 
-class BaseSearchCV(MetaEstimatorMixin, BaseEstimator, metaclass=ABCMeta):
+class BaseSearchCV(
+    MetaEstimatorMixin, BaseEstimator, CallbackSupportMixin, metaclass=ABCMeta
+):
     """Abstract base class for hyper parameter search with cross-validation."""
 
     _parameter_constraints: dict = {
@@ -959,6 +962,12 @@ class BaseSearchCV(MetaEstimatorMixin, BaseEstimator, metaclass=ABCMeta):
 
         routed_params = self._get_routed_params_for_fit(params)
 
+        callback_ctx = self._init_callback_context()
+        callback_ctx.max_subtasks = len(
+            ParameterGrid(self.param_grid)
+        )  # RandomisedSearchCV does not have param_grid
+        callback_ctx.eval_on_fit_begin(estimator=self)
+
         cv_orig = check_cv(self.cv, y, classifier=is_classifier(estimator))
         n_splits = cv_orig.get_n_splits(X, y, **routed_params.splitter.split)
 
@@ -996,6 +1005,25 @@ class BaseSearchCV(MetaEstimatorMixin, BaseEstimator, metaclass=ABCMeta):
                         )
                     )
 
+                # TODO: evaluate_candidates is also used by HalvingGridSearchCV, but in
+                # a loop...
+                outer_subcontexts = []
+                inner_subcontexts = []
+                for i in range(len(candidate_params)):
+                    outer_subcontext = callback_ctx.subcontext(
+                        task_name="param iteration",
+                        task_id=f"{i}",
+                        max_subtasks=n_splits,
+                    )
+                    outer_subcontexts.append(outer_subcontext)
+                    for j in range(n_splits):
+                        inner_subcontext = outer_subcontext.subcontext(
+                            task_name=f"split {j}", task_id=f"{j}"
+                        )
+                        inner_subcontexts.append(inner_subcontext)
+
+                # TODO: every inner_subcontext needs to propagate_callbacks down to a
+                # clone (probably in _fit_and_score)
                 out = parallel(
                     delayed(_fit_and_score)(
                         clone(base_estimator),
@@ -1013,6 +1041,15 @@ class BaseSearchCV(MetaEstimatorMixin, BaseEstimator, metaclass=ABCMeta):
                         enumerate(cv.split(X, y, **routed_params.splitter.split)),
                     )
                 )
+
+                # TODO: figure out which kwargs `search` can pass to
+                # eval_on_fit_task_end
+                for i in range(len(candidate_params)):
+                    for j in range(n_splits):
+                        inner_subcontexts[n_splits * i + j].eval_on_fit_task_end(
+                            estimator=self
+                        )
+                    outer_subcontexts[i].eval_on_fit_task_end(estimator=self)
 
                 if len(out) < 1:
                     raise ValueError(
