@@ -12,7 +12,7 @@ from types import GeneratorType
 
 import numpy as np
 import pytest
-from scipy.stats import bernoulli, expon, uniform
+from scipy.stats import bernoulli, expon, randint, uniform
 
 from sklearn import config_context
 from sklearn.base import BaseEstimator, ClassifierMixin, clone, is_classifier
@@ -2978,24 +2978,29 @@ def test_yield_masked_array_no_runtime_warning():
 
 
 @pytest.mark.parametrize(
+    "search_class, params, expected",
+    [
+        (GridSearchCV, {"max_iter": [5, 10, 15]}, (3, 2)),
+        (RandomizedSearchCV, {"max_iter": randint(5, 16)}, (10, 2)),
+    ],
+)
+@pytest.mark.parametrize(
     "est",
     [
         NoCallbackEstimator(),
     ],
 )
-def test_gridsearch_callbacks(est):
-    # Check that set callbacks are stored in GridSearchCV()._skl_callbacks and the
-    # correct number of hooks are called.
+def test_search_callbacks(search_class, params, expected, est):
+    # Check that set callbacks are stored in `_skl_callbacks` and the correct number of
+    # hooks are called.
     callbacks = [TestingCallback(), TestingAutoPropagatedCallback()]
-    # TODO: remove verbosity:
-    grid_search = GridSearchCV(
-        est, {"max_iter": [5, 10, 15]}, cv=2, scoring="accuracy", verbose=3
-    )  # 3 elements in max_iter * 2 splits
-    grid_search.set_callbacks(callbacks)
-    assert all(cb in grid_search._skl_callbacks for cb in callbacks)
+    search = search_class(est, params, cv=2, scoring="accuracy")
+    search.set_callbacks(callbacks)
+    assert all(cb in search._skl_callbacks for cb in callbacks)
 
-    grid_search.fit(X, y)
+    search.fit(X, y)
+    outer, inner = expected
     for callback in callbacks:
         assert callback.count_hooks("on_fit_begin") == 1
-        assert callback.count_hooks("on_fit_task_end") == 3 + 3 * 2
+        assert callback.count_hooks("on_fit_task_end") == outer + outer * inner
         assert callback.count_hooks("on_fit_end") == 1

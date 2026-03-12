@@ -963,9 +963,12 @@ class BaseSearchCV(
         routed_params = self._get_routed_params_for_fit(params)
 
         callback_ctx = self._init_callback_context()
-        callback_ctx.max_subtasks = len(
-            ParameterGrid(self.param_grid)
-        )  # RandomisedSearchCV does not have param_grid
+        if hasattr(self, "param_grid"):  # GridSearchCV
+            callback_ctx.max_subtasks = len(ParameterGrid(self.param_grid))
+        elif hasattr(self, "n_iter"):  # RandomizedSearchCV
+            callback_ctx.max_subtasks = self.n_iter
+        else:  # custom search estimators
+            callback_ctx.max_subtasks = None
         callback_ctx.eval_on_fit_begin(estimator=self)
 
         cv_orig = check_cv(self.cv, y, classifier=is_classifier(estimator))
