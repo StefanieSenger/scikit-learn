@@ -1016,7 +1016,7 @@ class BaseSearchCV(
                 for i in range(len(candidate_params)):
                     outer_subcontext = callback_ctx.subcontext(
                         task_name="param iteration",
-                        task_id=f"{i}",
+                        task_id=i,
                         max_subtasks=n_splits,
                     )
                     outer_subcontexts.append(outer_subcontext)
