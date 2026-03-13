@@ -963,11 +963,11 @@ class BaseSearchCV(
         routed_params = self._get_routed_params_for_fit(params)
 
         callback_ctx = self._init_callback_context()
-        if hasattr(self, "param_grid"):  # GridSearchCV
+        if hasattr(self, "param_grid"):  # GridSearchCV, HalvingGridSearchCV
             callback_ctx.max_subtasks = len(ParameterGrid(self.param_grid))
         elif hasattr(self, "n_iter"):  # RandomizedSearchCV
             callback_ctx.max_subtasks = self.n_iter
-        else:  # custom search estimators
+        else:  # custom and test classes, TODO: check HalvingRandomSearchCV
             callback_ctx.max_subtasks = None
         callback_ctx.eval_on_fit_begin(estimator=self)
 
@@ -995,6 +995,9 @@ class BaseSearchCV(
             all_out = []
             all_more_results = defaultdict(list)
 
+            # TODO: evaluate_candidates is also used by HalvingGridSearchCV, but in a
+            # loop; should this be another subtask-layer or should we add the next round
+            # of indices? Also fails for CustomSearchCV in the tests for similar reason.
             def evaluate_candidates(candidate_params, cv=None, more_results=None):
                 cv = cv or cv_orig
                 candidate_params = list(candidate_params)
@@ -1008,8 +1011,6 @@ class BaseSearchCV(
                         )
                     )
 
-                # TODO: evaluate_candidates is also used by HalvingGridSearchCV, but in
-                # a loop...
                 outer_subcontexts = []
                 inner_subcontexts = []
                 for i in range(len(candidate_params)):
@@ -1025,8 +1026,6 @@ class BaseSearchCV(
                         )
                         inner_subcontexts.append(inner_subcontext)
 
-                # TODO: every inner_subcontext needs to propagate_callbacks down to a
-                # clone (probably in _fit_and_score)
                 out = parallel(
                     delayed(_fit_and_score)(
                         clone(base_estimator),
@@ -1038,19 +1037,24 @@ class BaseSearchCV(
                         split_progress=(split_idx, n_splits),
                         candidate_progress=(cand_idx, n_candidates),
                         **fit_and_score_kwargs,
+                        callback_ctx=context,
                     )
-                    for (cand_idx, parameters), (split_idx, (train, test)) in product(
-                        enumerate(candidate_params),
-                        enumerate(cv.split(X, y, **routed_params.splitter.split)),
+                    for (
+                        (cand_idx, parameters),
+                        (split_idx, (train, test)),
+                    ), context in zip(
+                        product(
+                            enumerate(candidate_params),
+                            enumerate(cv.split(X, y, **routed_params.splitter.split)),
+                        ),
+                        inner_subcontexts,
                     )
                 )
 
-                # TODO: figure out which kwargs `search` can pass to
-                # eval_on_fit_task_end
                 for i in range(len(candidate_params)):
                     for j in range(n_splits):
                         inner_subcontexts[n_splits * i + j].eval_on_fit_task_end(
-                            estimator=self
+                            estimator=self  # TODO: later pass callback specific kwargs
                         )
                     outer_subcontexts[i].eval_on_fit_task_end(estimator=self)
 

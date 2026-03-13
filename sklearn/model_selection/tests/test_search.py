@@ -17,6 +17,7 @@ from scipy.stats import bernoulli, expon, randint, uniform
 from sklearn import config_context
 from sklearn.base import BaseEstimator, ClassifierMixin, clone, is_classifier
 from sklearn.callback.tests._utils import (
+    MaxIterEstimator,
     NoCallbackEstimator,
     TestingAutoPropagatedCallback,
     TestingCallback,
@@ -2977,30 +2978,56 @@ def test_yield_masked_array_no_runtime_warning():
         list(_yield_masked_array_for_each_param(candidate_params))
 
 
+@pytest.mark.parametrize("est", [NoCallbackEstimator(), MaxIterEstimator()])
 @pytest.mark.parametrize(
-    "search_class, params, expected",
+    "search_class, params",
     [
-        (GridSearchCV, {"max_iter": [5, 10, 15]}, (3, 2)),
-        (RandomizedSearchCV, {"max_iter": randint(5, 16)}, (10, 2)),
+        (GridSearchCV, {"max_iter": [1, 2, 3]}),
+        (RandomizedSearchCV, {"max_iter": randint(1, 4)}),
     ],
 )
-@pytest.mark.parametrize(
-    "est",
-    [
-        NoCallbackEstimator(),
-    ],
-)
-def test_search_callbacks(search_class, params, expected, est):
-    # Check that set callbacks are stored in `_skl_callbacks` and the correct number of
+def test_search_callbacks(search_class, params, est):
+    # Check that set callbacks are stored in `_skl_callbacks`, and the correct number of
     # hooks are called.
     callbacks = [TestingCallback(), TestingAutoPropagatedCallback()]
-    search = search_class(est, params, cv=2, scoring="accuracy")
+    if search_class is GridSearchCV:  # I was very surprised this worked, not sure
+        search = search_class(est, params, cv=2, scoring="accuracy")
+    else:  # RandomizedSearchCV
+        search = search_class(
+            est, params, cv=2, n_iter=3, scoring="accuracy", random_state=42
+        )
     search.set_callbacks(callbacks)
     assert all(cb in search._skl_callbacks for cb in callbacks)
 
     search.fit(X, y)
-    outer, inner = expected
-    for callback in callbacks:
-        assert callback.count_hooks("on_fit_begin") == 1
-        assert callback.count_hooks("on_fit_task_end") == outer + outer * inner
-        assert callback.count_hooks("on_fit_end") == 1
+    outer, inner = 3, 2  # n_candidates, n_splits
+
+    # for `NoCallbackEstimator` we expect only the hooks from `search` called:
+    if est.__class__.__name__ == "NoCallbackEstimator":
+        for callback in callbacks:
+            assert callback.count_hooks("on_fit_begin") == 1
+            assert callback.count_hooks("on_fit_task_end") == outer + outer * inner
+            assert callback.count_hooks("on_fit_end") == 1
+
+    # for `MaxIterEstimator` we expect the hooks from `search` called and additionally
+    # its own hooks, if the callback is propagated:
+    if est.__class__.__name__ == "MaxIterEstimator":
+        for callback in callbacks:
+            assert callback.count_hooks("on_fit_begin") == 1
+            if callback.__class__.__name__ == "TestingCallback":
+                assert callback.count_hooks("on_fit_task_end") == outer + outer * inner
+            else:  # TestingAutoPropagatedCallback
+                if search.__class__.__name__ == "GridSearchCV":
+                    assert callback.count_hooks(
+                        "on_fit_task_end"
+                    ) == outer + outer * inner + (inner * sum(params["max_iter"]))
+                else:
+                    # RandomizedSearchCV picks `max_iter` at random but we can access a
+                    # fitted attribute:
+                    propagated_inner = sum(
+                        [d["max_iter"] for d in search.cv_results_["params"]]
+                    )
+                    assert callback.count_hooks(
+                        "on_fit_task_end"
+                    ) == outer + outer * inner + (inner * propagated_inner)
+            assert callback.count_hooks("on_fit_end") == 1

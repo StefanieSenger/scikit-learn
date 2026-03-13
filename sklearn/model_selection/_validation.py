@@ -684,6 +684,7 @@ def _fit_and_score(
     split_progress=None,
     candidate_progress=None,
     error_score=np.nan,
+    callback_ctx=None,
 ):
     """Fit estimator and compute scores for a given dataset split.
 
@@ -777,6 +778,9 @@ def _fit_and_score(
     """
     xp, _ = get_namespace(X)
     X_device = device(X)
+
+    if callback_ctx is not None:
+        callback_ctx.propagate_callback_context(estimator)
 
     # Make sure that we can fancy index X even if train and test are provided
     # as NumPy arrays by NumPy only cross-validation splitters.
