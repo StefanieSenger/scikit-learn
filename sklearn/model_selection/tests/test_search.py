@@ -2098,7 +2098,7 @@ def test__custom_fit_no_run_search():
 
     with pytest.raises(NotImplementedError, match="_run_search not implemented."):
         # this should raise a NotImplementedError
-        BadSearchCV(SVC()).fit(X, y)
+        BadSearchCV(SVC(), cv=KFold(n_splits=2)).fit(X, y)
 
 
 # TODO: remove mark once loky bug is fixed:
