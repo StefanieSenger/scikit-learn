@@ -1,6 +1,8 @@
 # Authors: The scikit-learn developers
 # SPDX-License-Identifier: BSD-3-Clause
 
+import copy
+import inspect
 import uuid
 import warnings
 
@@ -64,29 +66,31 @@ from sklearn.callback._base import AutoPropagatedCallback
 #     def __init__(self, max_iter):
 #         self.max_iter = max_iter
 #
-#     @with_fit_callbacks
+#     @with_callbacks
 #     def fit(self, X, y):
 #         callback_ctx = self._init_callback_context(max_subtasks=self.max_iter)
-#         callback_ctx.eval_on_fit_task_begin()
+#         callback_ctx.call_on_fit_task_begin(X=X, y=y)
 #
 #         for i in range(self.max_iter):
-#             subcontext = callback_ctx.subcontext(task_id=i)
+#             subcontext = callback_ctx.subcontext(task_id=i).call_on_fit_task_begin(
+#                X=X, y=y,
+#             )
 #
 #             # Do something
 #
-#             subcontext.eval_on_fit_task_end(
-#                 data={"X_train": X, "y_train": y},
-#             )
+#             subcontext.call_on_fit_task_end(X=X, y=y)
 #
-#         callback_ctx.eval_on_fit_task_end(
-#             data={"X_train": X, "y_train": y},
-#         )
-#
+#         callback_ctx.call_on_fit_task_end(X=X, y=y)
 #         return self
-#
 #
 # It's also an object that is passed to the callback hooks to give them information
 # about the task being executed and its position in the task tree.
+
+
+# List of the parameters expected to be passed to call_on_fit_task_* (IN) and to be in
+# the hooks signatures (OUT).
+VALID_HOOK_PARAMS_IN = ["X", "y", "metadata", "reconstruction_attributes"]
+VALID_HOOK_PARAMS_OUT = ["X", "y", "metadata", "fitted_estimator"]
 
 
 class CallbackContext:
@@ -119,13 +123,6 @@ class CallbackContext:
 
     estimator_name : str
         The name of the estimator that holds this context.
-
-    parent : CallbackContext or None
-        The parent context of this context. None if this context is the root.
-
-    root_uuid : uuid.UUID instance
-        The UUID of the root context. All contexts in the same task tree have the same
-        root UUID that is used to identify the task tree itself.
 
     parent : CallbackContext or None
         The parent context of this context. None if this context is the root.
@@ -314,8 +311,86 @@ class CallbackContext:
             max_subtasks=max_subtasks,
         )
 
-    def eval_on_fit_task_begin(self, **kwargs):
-        """Evaluate the `on_fit_task_begin` hook of the callbacks.
+    def _call_hooks(self, hook_name, **kwargs):
+        """Helper to call the hook of all callbacks with their respective arguments.
+
+        Provide the right arguments to each hook by inspecting their signatures. Any
+        value that is a callable is replaced by what it returns to allow lazy loading of
+        the arguments.
+
+        Parameters
+        ----------
+        hook_name : str
+            Name of the callback hook to call.
+
+        **kwargs: dict
+            Keyword arguments passed to the callback context.
+
+        Returns
+        -------
+        result : bool
+            True if any hook call returned True. False otherwise.
+        """
+        if diff := set(kwargs.keys()) - set(VALID_HOOK_PARAMS_IN):
+            raise TypeError(
+                f"call_{hook_name} in estimator {self.estimator_name} has received "
+                f"parameters that are not valid: {diff}. The valid parameters are: "
+                f"{VALID_HOOK_PARAMS_IN}."
+            )
+
+        result = False
+
+        # Keep a cache of the evaluated args to evaluate them only once.
+        evaluated_args = {}
+
+        for callback in self._callbacks:
+            if callback in getattr(self, "_propagated_callbacks", []):
+                # Only call the `on_fit_task_end` hook of callbacks that are not
+                # propagated. For propagated callbacks, the hook will be called by the
+                # sub-estimator's root context (both represent the same task).
+                continue
+
+            signature = inspect.signature(getattr(callback, hook_name))
+            params_names = {
+                p.name
+                for p in signature.parameters.values()
+                if p.kind == p.KEYWORD_ONLY
+            }
+            if diff := set(params_names) - set(VALID_HOOK_PARAMS_OUT):
+                raise TypeError(
+                    f"Hook {hook_name} of the callback {callback.__class__.__name__} "
+                    f"has parameters that are not valid: {diff}. The valid parameters "
+                    f"are: {VALID_HOOK_PARAMS_OUT}."
+                )
+
+            args_to_pass = {}
+            for param_name in params_names:
+                if param_name not in evaluated_args:
+                    # Special case: "reconstruction_attributes" is not directly passed
+                    # to the hook. A ready to predict/transform estimator is created
+                    # from these attributes and passed to the hook as "fitted_estimator"
+                    if param_name == "fitted_estimator":
+                        attrs = kwargs.get("reconstruction_attributes", None)
+                        attrs = attrs() if callable(attrs) else attrs
+                        new_est = (
+                            _from_reconstruction_attributes(self.estimator, attrs)
+                            if attrs is not None
+                            else None
+                        )
+                        evaluated_args["fitted_estimator"] = new_est
+                    else:
+                        val = kwargs.get(param_name, None)
+                        val = val() if callable(val) else val
+                        evaluated_args[param_name] = val
+
+                args_to_pass[param_name] = evaluated_args[param_name]
+
+            result |= bool(getattr(callback, hook_name)(self, **args_to_pass))
+
+        return result
+
+    def call_on_fit_task_begin(self, **kwargs):
+        """Call the `on_fit_task_begin` hook of the callbacks.
 
         Parameters
         ----------
@@ -323,17 +398,11 @@ class CallbackContext:
             Additional optional arguments passed to the callback. The list of possible
             keys and corresponding values are described in detail at <TODO: add link>.
         """
-        for callback in self._callbacks:
-            # Only call the `on_fit_task_begin` hook of callbacks that are not
-            # propagated. For propagated callbacks, the hook will be called by the
-            # sub-estimator's root context (both represent the same task).
-            if callback not in getattr(self, "_propagated_callbacks", []):
-                callback.on_fit_task_begin(self, **kwargs)
-
+        self._call_hooks(hook_name="on_fit_task_begin", **kwargs)
         return self
 
-    def eval_on_fit_task_end(self, **kwargs):
-        """Evaluate the `on_fit_task_end` hook of the callbacks.
+    def call_on_fit_task_end(self, **kwargs):
+        """Call the `on_fit_task_end` hook of the callbacks.
 
         Parameters
         ----------
@@ -347,14 +416,7 @@ class CallbackContext:
             Whether or not to stop the current level of iterations at this end of this
             task.
         """
-        return any(
-            callback.on_fit_task_end(self, **kwargs)
-            for callback in self._callbacks
-            # Only call the `on_fit_task_end` hook of callbacks that are not
-            # propagated. For propagated callbacks, the hook will be called by the
-            # sub-estimator's root context (both represent the same task).
-            if callback not in getattr(self, "_propagated_callbacks", [])
-        )
+        return self._call_hooks(hook_name="on_fit_task_end", **kwargs)
 
     def propagate_callback_context(self, sub_estimator):
         """Propagate the context and callbacks to a sub-estimator.
@@ -397,7 +459,7 @@ class CallbackContext:
             if isinstance(callback, AutoPropagatedCallback)
             and (
                 callback.max_propagation_depth is None
-                or self._propagation_depth < callback.max_propagation_depth - 1
+                or self._propagation_depth < callback.max_propagation_depth
             )
         ]
         if not callbacks_to_propagate:
@@ -418,6 +480,29 @@ class CallbackContext:
         )
 
         return self
+
+
+def _from_reconstruction_attributes(estimator, reconstruction_attributes):
+    """Return a copy of the estimator as if it was fitted.
+
+    Parameters
+    ----------
+    estimator : estimator instance
+        The estimator from which to make a ready-to-be-evaluated copy.
+
+    reconstruction_attributes : dict
+        A dictionary containing the necessary attributes to create a working
+        fitted estimator from this instance.
+
+    Returns
+    -------
+    fitted_estimator : estimator instance
+        The fitted copy of this estimator.
+    """
+    new_estimator = copy.copy(estimator)  # TODO(callbacks) copy / deepcopy / clone ?
+    for key, val in reconstruction_attributes.items():
+        setattr(new_estimator, key, val)
+    return new_estimator
 
 
 def get_context_path(context):
