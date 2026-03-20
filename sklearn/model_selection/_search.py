@@ -1021,13 +1021,6 @@ class BaseSearchCV(
                         )
                     )
 
-                splits = list(cv.split(X, y, **routed_params.splitter.split))
-                if len(splits) != n_splits:
-                    raise ValueError(
-                        "cv.split and cv.get_n_splits returned inconsistent results. "
-                        f"Expected {cv_orig.n_splits} splits, got {n_splits}."
-                    )
-
                 out = parallel(
                     delayed(_fit_and_score)(
                         clone(base_estimator),
@@ -1055,6 +1048,12 @@ class BaseSearchCV(
                         "No fits were performed. "
                         "Was the CV iterator empty? "
                         "Were there no candidates?"
+                    )
+                elif len(out) != n_candidates * n_splits:
+                    raise ValueError(
+                        "cv.split and cv.get_n_splits returned "
+                        "inconsistent results. Expected {} "
+                        "splits, got {}".format(n_splits, len(out) // n_candidates)
                     )
 
                 _warn_or_raise_about_fit_failures(out, self.error_score)
