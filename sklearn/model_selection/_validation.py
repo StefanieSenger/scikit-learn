@@ -781,8 +781,7 @@ def _fit_and_score(
 
     if callback_ctx is not None:
         callback_ctx.propagate_callback_context(estimator)
-
-    callback_ctx.call_on_fit_task_begin()
+        callback_ctx.call_on_fit_task_begin()
 
     # Make sure that we can fancy index X even if train and test are provided
     # as NumPy arrays by NumPy only cross-validation splitters.
@@ -905,7 +904,8 @@ def _fit_and_score(
     if return_estimator:
         result["estimator"] = estimator
 
-    callback_ctx.call_on_fit_task_end()
+    if callback_ctx is not None:
+        callback_ctx.call_on_fit_task_end()
 
     return result
 

@@ -3016,17 +3016,18 @@ def test_search_callbacks(search_class, params, est):
                 == outer + inner + refit
             )
             assert callback.count_hooks("teardown") == 1
-
     if est.__class__.__name__ == "MaxIterEstimator":
         for callback in callbacks:
             assert callback.count_hooks("setup") == 1
+            # for `MaxIterEstimator` we expect only the hooks from `search` called if
+            # the callback is not propagated
             if callback.__class__.__name__ == "TestingCallback":
                 assert (
                     callback.count_hooks("on_fit_task_begin")
                     == callback.count_hooks("on_fit_task_end")
                     == outer + inner + refit
                 )
-            # for callbacks propagated to `MaxIterEstimator` we expect the outer hooks
+            # for `MaxIterEstimator` with callbacks propagated we expect the outer hooks
             # from `search` called (but not the inner hooks because they will be merged
             # with the sub-estimator's hooks) and additionally `MaxIterEstimator`'s own
             # hooks, and a few more of each for the refit:
