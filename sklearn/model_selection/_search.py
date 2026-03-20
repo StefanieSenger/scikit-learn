@@ -1020,12 +1020,6 @@ class BaseSearchCV(
                             n_splits, n_candidates, n_candidates * n_splits
                         )
                     )
-                subcontexts = []  # TODO: later pass callback specific kwargs
-                for i in range(len(candidate_params) * n_splits):
-                    subcontext = callback_ctx.subcontext(
-                        task_name=f"candidate-split iteration {i}", task_id=f"{i}"
-                    ).call_on_fit_task_begin()
-                    subcontexts.append(subcontext)
 
                 splits = list(cv.split(X, y, **routed_params.splitter.split))
                 if len(splits) != n_splits:
@@ -1045,23 +1039,16 @@ class BaseSearchCV(
                         split_progress=(split_idx, n_splits),
                         candidate_progress=(cand_idx, n_candidates),
                         **fit_and_score_kwargs,
-                        callback_ctx=context,
-                    )
-                    for (
-                        (cand_idx, parameters),
-                        (split_idx, (train, test)),
-                    ), context in zip(
-                        product(
-                            enumerate(candidate_params),
-                            enumerate(splits),
+                        callback_ctx=callback_ctx.subcontext(
+                            task_name="candidate-split iteration",
+                            task_id=split_idx * n_candidates + cand_idx,
                         ),
-                        subcontexts,
+                    )
+                    for (cand_idx, parameters), (split_idx, (train, test)) in product(
+                        enumerate(candidate_params),
+                        enumerate(cv.split(X, y, **routed_params.splitter.split)),
                     )
                 )
-
-                # TODO: later pass callback specific kwargs
-                for i in range(len(candidate_params) * n_splits):
-                    subcontexts[i].call_on_fit_task_end()
 
                 if len(out) < 1:
                     raise ValueError(

@@ -3022,16 +3022,16 @@ def test_search_callbacks(search_class, params, est):
                     == callback.count_hooks("on_fit_task_end")
                     == outer + inner
                 )
-            # for callbacks propagated to `MaxIterEstimator` we expect the hooks from
-            # `search` called and additionally its own hooks, and a few more of each for
-            # the refit:
+            # for callbacks propagated to `MaxIterEstimator` we expect the outer hooks
+            # from `search` called (but not the inner hooks because they will be merged
+            # with the sub-estimator's hooks) and additionally `MaxIterEstimator`'s own
+            # hooks, and a few more of each for the refit:
             else:  # TestingAutoPropagatedCallback
                 if search.__class__.__name__ == "GridSearchCV":
                     assert (
                         callback.count_hooks("on_fit_task_begin")
                         == callback.count_hooks("on_fit_task_end")
                         == outer  # outer search
-                        + inner  # inner search
                         + 2  # 2 splits
                         * (
                             1 * len(params["max_iter"])  # outer*inner MaxIter
@@ -3052,7 +3052,6 @@ def test_search_callbacks(search_class, params, est):
                         callback.count_hooks("on_fit_task_begin")
                         == callback.count_hooks("on_fit_task_end")
                         == outer  # outer search
-                        + inner  # inner search
                         + 2  # 2 splits
                         * (
                             1 * len(search.cv_results_["params"])  # outer*inner MaxIter
