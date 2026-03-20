@@ -3000,34 +3000,65 @@ def test_search_callbacks(search_class, params, est):
     assert all(cb in search._skl_callbacks for cb in callbacks)
 
     search.fit(X, y)
-    outer, inner = 3, 2  # n_candidates, n_splits
+    outer, inner = 1, 3 * 2  # calls to self._run_search(), n_candidates * n_splits
 
     # for `NoCallbackEstimator` we expect only the hooks from `search` called:
     if est.__class__.__name__ == "NoCallbackEstimator":
         for callback in callbacks:
-            assert callback.count_hooks("on_fit_begin") == 1
-            assert callback.count_hooks("on_fit_task_end") == outer + outer * inner
-            assert callback.count_hooks("on_fit_end") == 1
+            assert callback.count_hooks("setup") == 1
+            assert (
+                callback.count_hooks("on_fit_task_begin")
+                == callback.count_hooks("on_fit_task_end")
+                == outer + inner
+            )
+            assert callback.count_hooks("teardown") == 1
 
-    # for `MaxIterEstimator` we expect the hooks from `search` called and additionally
-    # its own hooks, if the callback is propagated:
     if est.__class__.__name__ == "MaxIterEstimator":
         for callback in callbacks:
-            assert callback.count_hooks("on_fit_begin") == 1
+            assert callback.count_hooks("setup") == 1
             if callback.__class__.__name__ == "TestingCallback":
-                assert callback.count_hooks("on_fit_task_end") == outer + outer * inner
+                assert (
+                    callback.count_hooks("on_fit_task_begin")
+                    == callback.count_hooks("on_fit_task_end")
+                    == outer + inner
+                )
+            # for callbacks propagated to `MaxIterEstimator` we expect the hooks from
+            # `search` called and additionally its own hooks, and a few more of each for
+            # the refit:
             else:  # TestingAutoPropagatedCallback
                 if search.__class__.__name__ == "GridSearchCV":
-                    assert callback.count_hooks(
-                        "on_fit_task_end"
-                    ) == outer + outer * inner + (inner * sum(params["max_iter"]))
+                    assert (
+                        callback.count_hooks("on_fit_task_begin")
+                        == callback.count_hooks("on_fit_task_end")
+                        == outer  # outer search
+                        + inner  # inner search
+                        + 2  # 2 splits
+                        * (
+                            1 * len(params["max_iter"])  # outer*inner MaxIter
+                            + sum(
+                                params["max_iter"]
+                            )  # sum of all max_iter combinations
+                        )
+                        # + 1 # refit: outer MaxIter
+                        # + search.best_params_["max_iter"] # refit: inner MaxIter
+                    )
                 else:
                     # RandomizedSearchCV picks `max_iter` at random but we can access a
                     # fitted attribute:
                     propagated_inner = sum(
                         [d["max_iter"] for d in search.cv_results_["params"]]
                     )
-                    assert callback.count_hooks(
-                        "on_fit_task_end"
-                    ) == outer + outer * inner + (inner * propagated_inner)
-            assert callback.count_hooks("on_fit_end") == 1
+                    assert (
+                        callback.count_hooks("on_fit_task_begin")
+                        == callback.count_hooks("on_fit_task_end")
+                        == outer  # outer search
+                        + inner  # inner search
+                        + 2  # 2 splits
+                        * (
+                            1 * len(search.cv_results_["params"])  # outer*inner MaxIter
+                            + propagated_inner  # sum of all max_iter combinations
+                        )
+                        # + 1 # refit: outer MaxIter
+                        # + search.best_params_["max_iter"] # refit: inner MaxIter
+                    )
+            assert callback.count_hooks("teardown") == 1

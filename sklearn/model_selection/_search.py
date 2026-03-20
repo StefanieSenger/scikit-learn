@@ -439,7 +439,7 @@ def _yield_masked_array_for_each_param(candidate_params):
 
 
 class BaseSearchCV(
-    MetaEstimatorMixin, BaseEstimator, CallbackSupportMixin, metaclass=ABCMeta
+    MetaEstimatorMixin, CallbackSupportMixin, BaseEstimator, metaclass=ABCMeta
 ):
     """Abstract base class for hyper parameter search with cross-validation."""
 
@@ -962,17 +962,27 @@ class BaseSearchCV(
 
         routed_params = self._get_routed_params_for_fit(params)
 
-        callback_ctx = self._init_callback_context()
-        if hasattr(self, "param_grid"):  # GridSearchCV, HalvingGridSearchCV
-            callback_ctx.max_subtasks = len(ParameterGrid(self.param_grid))
-        elif hasattr(self, "n_iter"):  # RandomizedSearchCV
-            callback_ctx.max_subtasks = self.n_iter
-        else:  # custom and test classes, TODO: check HalvingRandomSearchCV
-            callback_ctx.max_subtasks = None
-        callback_ctx.eval_on_fit_begin(estimator=self)
-
         cv_orig = check_cv(self.cv, y, classifier=is_classifier(estimator))
         n_splits = cv_orig.get_n_splits(X, y, **routed_params.splitter.split)
+
+        if hasattr(self, "param_grid"):  # GridSearchCV, HalvingGridSearchCV
+            callback_ctx = self._init_callback_context(
+                task_name="search iteration",
+                task_id=0,
+                max_subtasks=len(ParameterGrid(self.param_grid)) * n_splits,
+            )
+        elif hasattr(self, "n_iter"):  # RandomizedSearchCV
+            callback_ctx = self._init_callback_context(
+                task_name="search iteration",
+                task_id=0,
+                max_subtasks=self.n_iter * n_splits,
+            )
+        else:  # custom and test classes, TODO: check extra condition for
+            # HalvingRandomSearchCV
+            callback_ctx = self._init_callback_context(
+                task_name="search iteration", task_id=0
+            )
+        callback_ctx.call_on_fit_task_begin()
 
         base_estimator = clone(self.estimator)
 
@@ -1010,21 +1020,12 @@ class BaseSearchCV(
                             n_splits, n_candidates, n_candidates * n_splits
                         )
                     )
-
-                outer_subcontexts = []
-                inner_subcontexts = []
-                for i in range(len(candidate_params)):
-                    outer_subcontext = callback_ctx.subcontext(
-                        task_name="param iteration",
-                        task_id=i,
-                        max_subtasks=n_splits,
-                    )
-                    outer_subcontexts.append(outer_subcontext)
-                    for j in range(n_splits):
-                        inner_subcontext = outer_subcontext.subcontext(
-                            task_name=f"split {j}", task_id=f"{j}"
-                        )
-                        inner_subcontexts.append(inner_subcontext)
+                subcontexts = []  # TODO: later pass callback specific kwargs
+                for i in range(len(candidate_params) * n_splits):
+                    subcontext = callback_ctx.subcontext(
+                        task_name=f"candidate-split iteration {i}", task_id=f"{i}"
+                    ).call_on_fit_task_begin()
+                    subcontexts.append(subcontext)
 
                 splits = list(cv.split(X, y, **routed_params.splitter.split))
                 if len(splits) != n_splits:
@@ -1054,16 +1055,13 @@ class BaseSearchCV(
                             enumerate(candidate_params),
                             enumerate(splits),
                         ),
-                        inner_subcontexts,
+                        subcontexts,
                     )
                 )
 
-                for i in range(len(candidate_params)):
-                    for j in range(n_splits):
-                        inner_subcontexts[n_splits * i + j].eval_on_fit_task_end(
-                            estimator=self  # TODO: later pass callback specific kwargs
-                        )
-                    outer_subcontexts[i].eval_on_fit_task_end(estimator=self)
+                # TODO: later pass callback specific kwargs
+                for i in range(len(candidate_params) * n_splits):
+                    subcontexts[i].call_on_fit_task_end()
 
                 if len(out) < 1:
                     raise ValueError(
@@ -1096,7 +1094,7 @@ class BaseSearchCV(
                 return results
 
             self._run_search(evaluate_candidates)
-
+            callback_ctx.call_on_fit_task_end()
             # multimetric is determined here because in the case of a callable
             # self.scoring the return type is only known after calling
             first_test_score = all_out[0]["test_scores"]
