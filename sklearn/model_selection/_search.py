@@ -969,13 +969,13 @@ class BaseSearchCV(
             callback_ctx = self._init_callback_context(
                 task_name="search iteration",
                 task_id=0,
-                max_subtasks=len(ParameterGrid(self.param_grid)) * n_splits,
+                max_subtasks=len(ParameterGrid(self.param_grid)) * n_splits + 1,
             )
         elif hasattr(self, "n_iter"):  # RandomizedSearchCV
             callback_ctx = self._init_callback_context(
                 task_name="search iteration",
                 task_id=0,
-                max_subtasks=self.n_iter * n_splits,
+                max_subtasks=self.n_iter * n_splits + 1,
             )
         else:  # custom and test classes, TODO: check extra condition for
             # HalvingRandomSearchCV
@@ -1116,6 +1116,23 @@ class BaseSearchCV(
                 **clone(self.best_params_, safe=False)
             )
 
+            if hasattr(self, "param_grid"):  # GridSearchCV, HalvingGridSearchCV
+                callback_ctx = callback_ctx.subcontext(
+                    task_name="refit best params",
+                    task_id=len(ParameterGrid(self.param_grid)) * n_splits + 1,
+                )
+            elif hasattr(self, "n_iter"):  # RandomizedSearchCV
+                callback_ctx = callback_ctx.subcontext(
+                    task_name="refit best params", task_id=self.n_iter * n_splits + 1
+                )
+            else:  # custom and test classes, TODO: check extra condition for
+                # HalvingRandomSearchCV
+                callback_ctx = callback_ctx.subcontext(
+                    task_name="refit best params", task_id="refit best params"
+                )
+            callback_ctx.propagate_callback_context(self.best_estimator_)
+            callback_ctx.call_on_fit_task_begin()
+
             refit_start_time = time.time()
             if y is not None:
                 self.best_estimator_.fit(X, y, **routed_params.estimator.fit)
@@ -1126,6 +1143,8 @@ class BaseSearchCV(
 
             if hasattr(self.best_estimator_, "feature_names_in_"):
                 self.feature_names_in_ = self.best_estimator_.feature_names_in_
+
+            callback_ctx.call_on_fit_task_end()
 
         # Store the only scorer not as a dict for single metric evaluation
         if isinstance(scorers, _MultimetricScorer):

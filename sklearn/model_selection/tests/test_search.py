@@ -3000,7 +3000,11 @@ def test_search_callbacks(search_class, params, est):
     assert all(cb in search._skl_callbacks for cb in callbacks)
 
     search.fit(X, y)
-    outer, inner = 1, 3 * 2  # calls to self._run_search(), n_candidates * n_splits
+    outer, inner, refit = (
+        1,
+        3 * 2,
+        1,
+    )  # calls to self._run_search(), n_candidates * n_splits, refit
 
     # for `NoCallbackEstimator` we expect only the hooks from `search` called:
     if est.__class__.__name__ == "NoCallbackEstimator":
@@ -3009,7 +3013,7 @@ def test_search_callbacks(search_class, params, est):
             assert (
                 callback.count_hooks("on_fit_task_begin")
                 == callback.count_hooks("on_fit_task_end")
-                == outer + inner
+                == outer + inner + refit
             )
             assert callback.count_hooks("teardown") == 1
 
@@ -3020,7 +3024,7 @@ def test_search_callbacks(search_class, params, est):
                 assert (
                     callback.count_hooks("on_fit_task_begin")
                     == callback.count_hooks("on_fit_task_end")
-                    == outer + inner
+                    == outer + inner + refit
                 )
             # for callbacks propagated to `MaxIterEstimator` we expect the outer hooks
             # from `search` called (but not the inner hooks because they will be merged
@@ -3039,8 +3043,8 @@ def test_search_callbacks(search_class, params, est):
                                 params["max_iter"]
                             )  # sum of all max_iter combinations
                         )
-                        # + 1 # refit: outer MaxIter
-                        # + search.best_params_["max_iter"] # refit: inner MaxIter
+                        + 1  # refit: outer MaxIter
+                        + search.best_params_["max_iter"]  # refit: inner MaxIter
                     )
                 else:
                     # RandomizedSearchCV picks `max_iter` at random but we can access a
@@ -3057,7 +3061,7 @@ def test_search_callbacks(search_class, params, est):
                             1 * len(search.cv_results_["params"])  # outer*inner MaxIter
                             + propagated_inner  # sum of all max_iter combinations
                         )
-                        # + 1 # refit: outer MaxIter
-                        # + search.best_params_["max_iter"] # refit: inner MaxIter
+                        + 1  # refit: outer MaxIter
+                        + search.best_params_["max_iter"]  # refit: inner MaxIter
                     )
             assert callback.count_hooks("teardown") == 1
