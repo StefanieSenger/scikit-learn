@@ -2984,6 +2984,7 @@ def test_yield_masked_array_no_runtime_warning():
     [
         (GridSearchCV, {"max_iter": [1, 2, 3]}),
         (RandomizedSearchCV, {"max_iter": randint(1, 4)}),
+        (HalvingGridSearchCV, {"max_iter": [1, 2, 3]}),
     ],
 )
 def test_search_callbacks(search_class, params, est):
@@ -2992,19 +2993,24 @@ def test_search_callbacks(search_class, params, est):
     callbacks = [TestingCallback(), TestingAutoPropagatedCallback()]
     if search_class is GridSearchCV:  # I was very surprised this worked, not sure
         search = search_class(est, params, cv=2, scoring="accuracy")
-    else:  # RandomizedSearchCV
+    elif search_class is RandomizedSearchCV:
         search = search_class(
             est, params, cv=2, n_iter=3, scoring="accuracy", random_state=42
+        )
+    else:  # HalvingGridSearchCV
+        search = search_class(
+            est, params, cv=2, aggressive_elimination=True, scoring="accuracy"
         )
     search.set_callbacks(callbacks)
     assert all(cb in search._skl_callbacks for cb in callbacks)
 
     search.fit(X, y)
-    outer, inner, refit = (
-        1,
-        3 * 2,
-        1,
-    )  # calls to self._run_search(), n_candidates * n_splits, refit
+
+    outer = 1  # calls to self._run_search()
+    inner = 3 * 2  # n_candidates * n_splits
+    refit = 1  # refit step
+    if search.__class__.__name__ == "HalvingGridSearchCV":
+        inner = inner * 2  # aggressive_elimination=True forces n_iterations=2
 
     # for `NoCallbackEstimator` we expect only the hooks from `search` called:
     if est.__class__.__name__ == "NoCallbackEstimator":
@@ -3032,7 +3038,7 @@ def test_search_callbacks(search_class, params, est):
             # with the sub-estimator's hooks) and additionally `MaxIterEstimator`'s own
             # hooks, and a few more of each for the refit:
             else:  # TestingAutoPropagatedCallback
-                if search.__class__.__name__ == "GridSearchCV":
+                if search.__class__.__name__ in ["GridSearchCV", "HalvingGridSearchCV"]:
                     assert (
                         callback.count_hooks("on_fit_task_begin")
                         == callback.count_hooks("on_fit_task_end")
@@ -3047,7 +3053,7 @@ def test_search_callbacks(search_class, params, est):
                         + 1  # refit: outer MaxIter
                         + search.best_params_["max_iter"]  # refit: inner MaxIter
                     )
-                else:
+                else:  # RandomizedSearchCV or HalvingRandomSearchCV
                     # RandomizedSearchCV picks `max_iter` at random but we can access a
                     # fitted attribute:
                     propagated_inner = sum(
