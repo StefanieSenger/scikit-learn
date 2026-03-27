@@ -1111,6 +1111,7 @@ class BaseSearchCV(
                 return results
 
             self._run_search(evaluate_candidates)
+
             # multimetric is determined here because in the case of a callable
             # self.scoring the return type is only known after calling
             first_test_score = all_out[0]["test_scores"]
@@ -1150,7 +1151,16 @@ class BaseSearchCV(
             )
 
             refit_subctx.propagate_callback_context(self.best_estimator_)
-            refit_subctx.call_on_fit_task_begin()
+            sw = params.get("sample_weight", {})
+            metadata = {
+                "train": {"sample_weight": sw},
+                "val": {
+                    "X_val": params.get("X_val", {}),
+                    "y_val": params.get("y_val", {}),
+                    "sample_weight": params.get("sample_weight_val", {}),
+                },
+            }
+            refit_subctx.call_on_fit_task_begin(X=X, y=y, metadata=metadata)
 
             refit_start_time = time.time()
             if y is not None:
@@ -1163,8 +1173,7 @@ class BaseSearchCV(
             if hasattr(self.best_estimator_, "feature_names_in_"):
                 self.feature_names_in_ = self.best_estimator_.feature_names_in_
 
-            refit_subctx.call_on_fit_task_end()
-        callback_ctx.call_on_fit_task_end()
+            refit_subctx.call_on_fit_task_end(X=X, y=y, metadata=metadata)
 
         # Store the only scorer not as a dict for single metric evaluation
         if isinstance(scorers, _MultimetricScorer):
@@ -1174,6 +1183,8 @@ class BaseSearchCV(
 
         self.cv_results_ = results
         self.n_splits_ = n_splits
+
+        callback_ctx.call_on_fit_task_end()
 
         return self
 

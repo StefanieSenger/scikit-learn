@@ -3085,3 +3085,6 @@ def test_search_callbacks(search, est):
                         + search.best_params_["max_iter"]  # refit: inner MaxIter
                     )
             assert callback.count_hooks("teardown") == 1
+
+
+# TODO add a test to check if X, y and metadata are correctly passed to the callback
