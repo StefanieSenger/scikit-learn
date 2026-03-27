@@ -998,8 +998,6 @@ class BaseSearchCV(
         n_splits = cv_orig.get_n_splits(X, y, **routed_params.splitter.split)
 
         callback_ctx = self._init_callback_context(
-            task_name="fit",
-            task_id=0,
             max_subtasks=1 + (self.refit is not False),
         ).call_on_fit_task_begin()
 
@@ -1064,7 +1062,6 @@ class BaseSearchCV(
                         callback_ctx=search_subctx.subcontext(
                             task_name="candidate-split iteration",
                             task_id=split_idx * n_candidates + cand_idx,
-                            max_subtasks=0,
                         ),
                     )
                     for (cand_idx, parameters), (split_idx, (train, test)) in product(
@@ -1147,7 +1144,7 @@ class BaseSearchCV(
             )
 
             refit_subctx = callback_ctx.subcontext(
-                task_name="refit with best params", task_id=1, max_subtasks=0
+                task_name="refit with best params", task_id=1
             )
 
             refit_subctx.propagate_callback_context(self.best_estimator_)
