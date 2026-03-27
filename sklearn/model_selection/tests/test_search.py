@@ -2981,27 +2981,33 @@ def test_yield_masked_array_no_runtime_warning():
 # TODO: test with refit=False
 @pytest.mark.parametrize("est", [NoCallbackEstimator(), MaxIterEstimator()])
 @pytest.mark.parametrize(
-    "search_class, params",
+    "search",
     [
-        (GridSearchCV, {"max_iter": [1, 2, 3]}),
-        (RandomizedSearchCV, {"max_iter": randint(1, 4)}),
-        (HalvingGridSearchCV, {"max_iter": [1, 2, 3]}),
+        GridSearchCV(
+            DummyClassifier(), {"max_iter": [1, 2, 3]}, cv=2, scoring="accuracy"
+        ),
+        RandomizedSearchCV(
+            DummyClassifier(),
+            {"max_iter": randint(1, 4)},
+            cv=2,
+            n_iter=3,
+            scoring="accuracy",
+            random_state=42,
+        ),
+        HalvingGridSearchCV(
+            DummyClassifier(),
+            {"max_iter": [1, 2, 3]},
+            cv=2,
+            aggressive_elimination=True,
+            scoring="accuracy",
+        ),
     ],
 )
-def test_search_callbacks(search_class, params, est):
+def test_search_callbacks(search, est):
     # Check that set callbacks are stored in `_skl_callbacks`, and the correct number of
     # hooks are called.
     callbacks = [TestingCallback(), TestingAutoPropagatedCallback()]
-    if search_class is GridSearchCV:  # I was very surprised this worked, not sure
-        search = search_class(est, params, cv=2, scoring="accuracy")
-    elif search_class is RandomizedSearchCV:
-        search = search_class(
-            est, params, cv=2, n_iter=3, scoring="accuracy", random_state=42
-        )
-    else:  # HalvingGridSearchCV
-        search = search_class(
-            est, params, cv=2, aggressive_elimination=True, scoring="accuracy"
-        )
+    search.set_params(estimator=est)
     search.set_callbacks(callbacks)
     assert all(cb in search._skl_callbacks for cb in callbacks)
 
@@ -3048,9 +3054,12 @@ def test_search_callbacks(search_class, params, est):
                         + iterations
                         + 2  # 2 splits
                         * (
-                            1 * len(params["max_iter"])  # outer*inner MaxIter
+                            1
+                            * len(
+                                search.get_params()["param_grid"]["max_iter"]
+                            )  # outer*inner MaxIter
                             + sum(
-                                params["max_iter"]
+                                search.get_params()["param_grid"]["max_iter"]
                             )  # sum of all max_iter combinations
                         )
                         + 1  # refit: outer MaxIter
