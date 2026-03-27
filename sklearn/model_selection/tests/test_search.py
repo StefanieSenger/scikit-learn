@@ -2978,6 +2978,7 @@ def test_yield_masked_array_no_runtime_warning():
         list(_yield_masked_array_for_each_param(candidate_params))
 
 
+# TODO: test with refit=False
 @pytest.mark.parametrize("est", [NoCallbackEstimator(), MaxIterEstimator()])
 @pytest.mark.parametrize(
     "search_class, params",
@@ -3006,11 +3007,12 @@ def test_search_callbacks(search_class, params, est):
 
     search.fit(X, y)
 
-    outer = 1  # calls to self._run_search()
-    inner = 3 * 2  # n_candidates * n_splits
-    refit = 1  # refit step
+    outer = 1
+    iterations = 1  # calls to self._run_search()
     if search.__class__.__name__ == "HalvingGridSearchCV":
-        inner = inner * 2  # aggressive_elimination=True forces n_iterations=2
+        iterations = iterations * 2  # aggressive_elimination=True forces n_iterations=2
+    searches = 3 * 2  # n_candidates * n_splits
+    refit = 1  # refit step
 
     # for `NoCallbackEstimator` we expect only the hooks from `search` called:
     if est.__class__.__name__ == "NoCallbackEstimator":
@@ -3019,7 +3021,7 @@ def test_search_callbacks(search_class, params, est):
             assert (
                 callback.count_hooks("on_fit_task_begin")
                 == callback.count_hooks("on_fit_task_end")
-                == outer + inner + refit
+                == outer + iterations + searches + refit
             )
             assert callback.count_hooks("teardown") == 1
     if est.__class__.__name__ == "MaxIterEstimator":
@@ -3031,7 +3033,7 @@ def test_search_callbacks(search_class, params, est):
                 assert (
                     callback.count_hooks("on_fit_task_begin")
                     == callback.count_hooks("on_fit_task_end")
-                    == outer + inner + refit
+                    == outer + iterations + searches + refit
                 )
             # for `MaxIterEstimator` with callbacks propagated we expect the outer hooks
             # from `search` called (but not the inner hooks because they will be merged
@@ -3042,7 +3044,8 @@ def test_search_callbacks(search_class, params, est):
                     assert (
                         callback.count_hooks("on_fit_task_begin")
                         == callback.count_hooks("on_fit_task_end")
-                        == outer  # outer search
+                        == outer
+                        + iterations
                         + 2  # 2 splits
                         * (
                             1 * len(params["max_iter"])  # outer*inner MaxIter
@@ -3051,10 +3054,10 @@ def test_search_callbacks(search_class, params, est):
                             )  # sum of all max_iter combinations
                         )
                         + 1  # refit: outer MaxIter
-                        + search.best_params_["max_iter"]  # refit: inner MaxIter
+                        + search.best_params_["max_iter"]  # refit
                     )
                 else:  # RandomizedSearchCV or HalvingRandomSearchCV
-                    # RandomizedSearchCV picks `max_iter` at random but we can access a
+                    # random search picks `max_iter` at random but we can access a
                     # fitted attribute:
                     propagated_inner = sum(
                         [d["max_iter"] for d in search.cv_results_["params"]]
@@ -3062,7 +3065,8 @@ def test_search_callbacks(search_class, params, est):
                     assert (
                         callback.count_hooks("on_fit_task_begin")
                         == callback.count_hooks("on_fit_task_end")
-                        == outer  # outer search
+                        == outer
+                        + iterations
                         + 2  # 2 splits
                         * (
                             1 * len(search.cv_results_["params"])  # outer*inner MaxIter

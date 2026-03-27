@@ -965,24 +965,11 @@ class BaseSearchCV(
         cv_orig = check_cv(self.cv, y, classifier=is_classifier(estimator))
         n_splits = cv_orig.get_n_splits(X, y, **routed_params.splitter.split)
 
-        if hasattr(self, "param_grid"):  # GridSearchCV, HalvingGridSearchCV
-            callback_ctx = self._init_callback_context(
-                task_name="search iteration",
-                task_id=0,
-                max_subtasks=len(ParameterGrid(self.param_grid)) * n_splits + 1,
-            )
-        elif hasattr(self, "n_iter"):  # RandomizedSearchCV
-            callback_ctx = self._init_callback_context(
-                task_name="search iteration",
-                task_id=0,
-                max_subtasks=self.n_iter * n_splits + 1,
-            )
-        else:  # custom and test classes, TODO: check extra condition for
-            # HalvingRandomSearchCV
-            callback_ctx = self._init_callback_context(
-                task_name="search iteration", task_id=0
-            )
-        callback_ctx.call_on_fit_task_begin()
+        callback_ctx = self._init_callback_context(
+            task_name="fit",
+            task_id=0,
+            max_subtasks=1 + (self.refit is not False),
+        ).call_on_fit_task_begin()
 
         base_estimator = clone(self.estimator)
 
@@ -1021,6 +1008,16 @@ class BaseSearchCV(
                         )
                     )
 
+                if hasattr(self, "param_grid"):  # GridSearchCV, HalvingGridSearchCV
+                    max_callback_subtasks = n_candidates * n_splits
+                elif hasattr(self, "n_iter"):  # RandomizedSearchCV
+                    max_callback_subtasks = self.n_iter * n_splits
+                else:  # custom and test classes, TODO: check extra condition for
+                    max_callback_subtasks = None
+                search_subctx = callback_ctx.subcontext(
+                    task_name="search", task_id=0, max_subtasks=max_callback_subtasks
+                ).call_on_fit_task_begin()
+
                 out = parallel(
                     delayed(_fit_and_score)(
                         clone(base_estimator),
@@ -1032,9 +1029,10 @@ class BaseSearchCV(
                         split_progress=(split_idx, n_splits),
                         candidate_progress=(cand_idx, n_candidates),
                         **fit_and_score_kwargs,
-                        callback_ctx=callback_ctx.subcontext(
+                        callback_ctx=search_subctx.subcontext(
                             task_name="candidate-split iteration",
                             task_id=split_idx * n_candidates + cand_idx,
+                            max_subtasks=0,
                         ),
                     )
                     for (cand_idx, parameters), (split_idx, (train, test)) in product(
@@ -1042,6 +1040,7 @@ class BaseSearchCV(
                         enumerate(cv.split(X, y, **routed_params.splitter.split)),
                     )
                 )
+                search_subctx.call_on_fit_task_end()
 
                 if len(out) < 1:
                     raise ValueError(
@@ -1080,7 +1079,6 @@ class BaseSearchCV(
                 return results
 
             self._run_search(evaluate_candidates)
-            callback_ctx.call_on_fit_task_end()
             # multimetric is determined here because in the case of a callable
             # self.scoring the return type is only known after calling
             first_test_score = all_out[0]["test_scores"]
@@ -1115,22 +1113,12 @@ class BaseSearchCV(
                 **clone(self.best_params_, safe=False)
             )
 
-            if hasattr(self, "param_grid"):  # GridSearchCV, HalvingGridSearchCV
-                callback_ctx = callback_ctx.subcontext(
-                    task_name="refit best params",
-                    task_id=len(ParameterGrid(self.param_grid)) * n_splits + 1,
-                )
-            elif hasattr(self, "n_iter"):  # RandomizedSearchCV
-                callback_ctx = callback_ctx.subcontext(
-                    task_name="refit best params", task_id=self.n_iter * n_splits + 1
-                )
-            else:  # custom and test classes, TODO: check extra condition for
-                # HalvingRandomSearchCV
-                callback_ctx = callback_ctx.subcontext(
-                    task_name="refit best params", task_id="refit best params"
-                )
-            callback_ctx.propagate_callback_context(self.best_estimator_)
-            callback_ctx.call_on_fit_task_begin()
+            refit_subctx = callback_ctx.subcontext(
+                task_name="refit with best params", task_id=1, max_subtasks=0
+            )
+
+            refit_subctx.propagate_callback_context(self.best_estimator_)
+            refit_subctx.call_on_fit_task_begin()
 
             refit_start_time = time.time()
             if y is not None:
@@ -1143,7 +1131,8 @@ class BaseSearchCV(
             if hasattr(self.best_estimator_, "feature_names_in_"):
                 self.feature_names_in_ = self.best_estimator_.feature_names_in_
 
-            callback_ctx.call_on_fit_task_end()
+            refit_subctx.call_on_fit_task_end()
+        callback_ctx.call_on_fit_task_end()
 
         # Store the only scorer not as a dict for single metric evaluation
         if isinstance(scorers, _MultimetricScorer):
