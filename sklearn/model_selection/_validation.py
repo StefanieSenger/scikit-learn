@@ -780,7 +780,22 @@ def _fit_and_score(
 
     if callback_ctx is not None:
         callback_ctx.propagate_callback_context(estimator)
-        callback_ctx.call_on_fit_task_begin()
+        # TODO: which metadata do we pass to a callback, if we cannot set a request on
+        # it? do we prefer what is routed to estimator.fit and use what is computed in
+        # here as a fallback?
+        sw = fit_params.get("sample_weight", {})
+        metadata = {
+            "train": {"sample_weight": sw},
+            "val": {
+                "X_val": fit_params.get("X_val", X[test]),
+                "y_val": fit_params.get("y_val", y[test]),
+                "sample_weight": fit_params.get(
+                    "sample_weight_val",
+                    sw[test] if sw else {},
+                ),
+            },
+        }
+        callback_ctx.call_on_fit_task_begin(X=X, y=y, metadata=metadata)
 
     # Make sure that we can fancy index X even if train and test are provided
     # as NumPy arrays by NumPy only cross-validation splitters.
@@ -904,7 +919,7 @@ def _fit_and_score(
         result["estimator"] = estimator
 
     if callback_ctx is not None:
-        callback_ctx.call_on_fit_task_end()
+        callback_ctx.call_on_fit_task_end(X=X, y=y, metadata=metadata)
 
     return result
 
