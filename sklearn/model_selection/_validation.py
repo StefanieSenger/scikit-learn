@@ -913,7 +913,7 @@ def _fit_and_score(
         result["estimator"] = estimator
 
     if callback_ctx is not None:
-        # passing current estimator as if it was best_estimator_ to trigger the refit
+        # passing current estimator as if it was best_estimator_ to influence the refit
         callback_ctx.call_on_fit_task_end(
             X=X,
             y=y,

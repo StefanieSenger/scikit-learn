@@ -1174,12 +1174,7 @@ class BaseSearchCV(
                 self.feature_names_in_ = self.best_estimator_.feature_names_in_
 
             refit_subctx.call_on_fit_task_end(
-                X=X,
-                y=y,
-                metadata=metadata,
-                reconstruction_attributes=lambda: {
-                    "best_estimator_": self.best_estimator_
-                },
+                X=X, y=y, metadata=metadata, reconstruction_attributes={}
             )
 
         # Store the only scorer not as a dict for single metric evaluation
