@@ -1173,7 +1173,14 @@ class BaseSearchCV(
             if hasattr(self.best_estimator_, "feature_names_in_"):
                 self.feature_names_in_ = self.best_estimator_.feature_names_in_
 
-            refit_subctx.call_on_fit_task_end(X=X, y=y, metadata=metadata)
+            refit_subctx.call_on_fit_task_end(
+                X=X,
+                y=y,
+                metadata=metadata,
+                reconstruction_attributes=lambda: {
+                    "best_estimator_": self.best_estimator_
+                },
+            )
 
         # Store the only scorer not as a dict for single metric evaluation
         if isinstance(scorers, _MultimetricScorer):

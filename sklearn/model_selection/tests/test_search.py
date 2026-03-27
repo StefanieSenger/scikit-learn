@@ -3088,3 +3088,4 @@ def test_search_callbacks(search, est):
 
 
 # TODO add a test to check if X, y and metadata are correctly passed to the callback
+# TODO: add test to check if reconstruction_attributes are passed correctly to callback
