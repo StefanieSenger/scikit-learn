@@ -1,0 +1,2 @@
+- Misnamed Changelog Entry.
+  https://github.com/scientific-python/action-towncrier-changelog should fail.
