@@ -1578,9 +1578,9 @@ Quoting Wikipedia :
   sensitivity, and FPR is one minus the specificity or true negative rate."
 
 This function requires the true binary value and the target scores, which can
-either be probability estimates of the positive class, confidence values, or
-binary decisions. Here is a small example of how to use the :func:`roc_curve`
-function::
+either be probability estimates of the positive class or non-thresholded decision values
+(as returned by :term:`decision_function` on some classifiers). Here is a small example
+of how to use the :func:`roc_curve` function::
 
     >>> import numpy as np
     >>> from sklearn.metrics import roc_curve
