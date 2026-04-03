@@ -468,7 +468,7 @@ Classification metrics
 
 The :mod:`sklearn.metrics` module implements several loss, score, and utility functions
 to measure classification performance. Some metrics might require probability estimates
-of the positive class, or non-thresholded decision values (as returned by
+of the positive class or non-thresholded decision values (as returned by
 :term:`decision_function` on some classifiers). Most implementations allow each sample
 to provide a weighted contribution to the overall score, through the ``sample_weight``
 parameter.
