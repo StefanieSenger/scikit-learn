@@ -34,6 +34,7 @@ from sklearn.utils import (
 from sklearn.utils._param_validation import Interval, Options, StrOptions
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.fixes import _get_additional_lbfgs_options_dict
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.metaestimators import available_if
 from sklearn.utils.multiclass import (
     _check_partial_fit_first_call,
@@ -874,7 +875,9 @@ class BaseMultilayerPerceptron(BaseEstimator, ABC):
         return tags
 
 
-class MLPClassifier(ClassifierMixin, BaseMultilayerPerceptron):
+class MLPClassifier(
+    AutoRequestSampleWeightMixin, ClassifierMixin, BaseMultilayerPerceptron
+):
     """Multi-layer Perceptron classifier.
 
     This model optimizes the log-loss function using LBFGS or stochastic
@@ -1373,7 +1376,9 @@ class MLPClassifier(ClassifierMixin, BaseMultilayerPerceptron):
         return tags
 
 
-class MLPRegressor(RegressorMixin, BaseMultilayerPerceptron):
+class MLPRegressor(
+    AutoRequestSampleWeightMixin, RegressorMixin, BaseMultilayerPerceptron
+):
     """Multi-layer Perceptron regressor.
 
     This model optimizes the squared error using LBFGS or stochastic gradient

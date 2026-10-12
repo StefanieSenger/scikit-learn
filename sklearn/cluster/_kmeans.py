@@ -43,6 +43,7 @@ from sklearn.utils import check_array, check_random_state
 from sklearn.utils._openmp_helpers import _openmp_effective_n_threads
 from sklearn.utils._param_validation import Interval, StrOptions, validate_params
 from sklearn.utils.extmath import row_norms
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.parallel import (
     _get_threadpool_controller,
     _threadpool_controller_decorator,
@@ -1183,7 +1184,7 @@ class _BaseKMeans(
         return tags
 
 
-class KMeans(_BaseKMeans):
+class KMeans(AutoRequestSampleWeightMixin, _BaseKMeans):
     """K-Means clustering.
 
     Read more in the :ref:`User Guide <k_means>`.
@@ -1665,7 +1666,7 @@ def _mini_batch_step(
     return inertia
 
 
-class MiniBatchKMeans(_BaseKMeans):
+class MiniBatchKMeans(AutoRequestSampleWeightMixin, _BaseKMeans):
     """
     Mini-Batch K-Means clustering.
 

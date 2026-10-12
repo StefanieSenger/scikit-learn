@@ -24,6 +24,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.utils import check_array, check_consistent_length
 from sklearn.utils._param_validation import Interval, StrOptions
 from sklearn.utils.extmath import svd_flip
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.validation import FLOAT_DTYPES, check_is_fitted, validate_data
 
 __all__ = ["PLSSVD", "PLSCanonical", "PLSRegression"]
@@ -504,7 +505,7 @@ class _PLS(
         return tags
 
 
-class PLSRegression(_PLS):
+class PLSRegression(AutoRequestSampleWeightMixin, _PLS):
     """PLS regression.
 
     PLSRegression is also known as PLS2 or PLS1, depending on the number of
@@ -655,7 +656,7 @@ class PLSRegression(_PLS):
         return self
 
 
-class PLSCanonical(_PLS):
+class PLSCanonical(AutoRequestSampleWeightMixin, _PLS):
     """Partial Least Squares transformer and regressor.
 
     For a comparison between other cross decomposition algorithms, see
@@ -786,7 +787,7 @@ class PLSCanonical(_PLS):
         )
 
 
-class CCA(_PLS):
+class CCA(AutoRequestSampleWeightMixin, _PLS):
     """Canonical Correlation Analysis, also known as "Mode B" PLS.
 
     For a comparison between other cross decomposition algorithms, see

@@ -19,6 +19,7 @@ from sklearn.cluster._kmeans import (
 from sklearn.utils._openmp_helpers import _openmp_effective_n_threads
 from sklearn.utils._param_validation import Integral, Interval, StrOptions
 from sklearn.utils.extmath import row_norms
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.validation import (
     _check_sample_weight,
     check_is_fitted,
@@ -80,7 +81,7 @@ class _BisectingTree:
             yield from self.right.iter_leaves()
 
 
-class BisectingKMeans(_BaseKMeans):
+class BisectingKMeans(AutoRequestSampleWeightMixin, _BaseKMeans):
     """Bisecting K-Means clustering.
 
     Read more in the :ref:`User Guide <bisect_k_means>`.

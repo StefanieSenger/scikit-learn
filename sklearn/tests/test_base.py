@@ -1,6 +1,7 @@
 # Authors: The scikit-learn developers
 # SPDX-License-Identifier: BSD-3-Clause
 
+import inspect
 import pickle
 import re
 import warnings
@@ -31,14 +32,23 @@ from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.svm import SVC, SVR
 from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
 from sklearn.utils import deprecated
-from sklearn.utils._metadata_requests import SIMPLE_METHODS
+from sklearn.utils._metadata_requests import (
+    SIMPLE_METHODS,
+    _AutoRequestMixin,
+    _MetadataRequester,
+)
 from sklearn.utils._mocking import MockDataFrame
 from sklearn.utils._set_output import _get_output_config
 from sklearn.utils._testing import (
     _convert_container,
     assert_array_equal,
 )
-from sklearn.utils.metadata_routing import get_routing_for_object
+from sklearn.utils.discovery import all_estimators
+from sklearn.utils.metadata_routing import (
+    AutoRequestMixin,
+    AutoRequestSampleWeightMixin,
+    get_routing_for_object,
+)
 from sklearn.utils.validation import _check_n_features, validate_data
 
 
@@ -1133,76 +1143,151 @@ def test_param_is_default(default_value, test_value):
     assert "param" not in non_default
 
 
-def test_baseestimator_sample_weight_auto_request():
-    """Test that sklearn estimators auto-request `sample_weight`."""
+def test_auto_request_sample_weight_mixin():
+    """`AutoRequestSampleWeightMixin` auto-requests `sample_weight` on the methods
+    accepting it, and nothing else."""
 
-    class MyEstimator(BaseEstimator):
-        """This class lives in a sklearn module and therefore creates the
-        `_auto_request_sample_weight` class attribute in `__init_subclass__`."""
-
+    class MyEstimator(AutoRequestSampleWeightMixin, BaseEstimator):
         def fit(self, X, y, sample_weight=None):
             return self  # pragma: no cover
 
         def predict(self, X, y=None):
             return y  # pragma: no cover
 
-    assert MyEstimator._auto_request_sample_weight
-    est = MyEstimator()
+    # It is the parametrized mixin with `sample_weight` baked in.
+    assert AutoRequestSampleWeightMixin.__mro__[1] is AutoRequestMixin("sample_weight")
 
+    est = MyEstimator()
     with config_context(enable_metadata_auto_requests=True):
         for method in SIMPLE_METHODS:
-            if method == "fit":
-                assert (
-                    getattr(get_routing_for_object(est), method).requests.get(
-                        "sample_weight"
-                    )
-                    is True
-                )
-            else:
-                assert (
-                    getattr(get_routing_for_object(est), method).requests.get(
-                        "sample_weight"
-                    )
-                    is None
-                )
+            requests = getattr(get_routing_for_object(est), method).requests
+            assert requests.get("sample_weight") is (True if method == "fit" else None)
 
 
-def test_third_party_baseestimator_no_sample_weight_auto_request():
-    # Test that third-party subclasses of `BaseEstimator` do not auto-request
-    # sample_weight.
+def test_baseestimator_no_auto_request():
+    # Inheriting from `BaseEstimator` alone does not auto-request anything, inside or
+    # outside of scikit-learn.
+    class MyEstimator(BaseEstimator):
+        def fit(self, X, y, sample_weight=None):
+            return self  # pragma: no cover
 
-    def fit(self, X, y, sample_weight=None):
-        return self  # pragma: no cover
+    with config_context(enable_metadata_auto_requests=True):
+        routing = get_routing_for_object(MyEstimator())
+        assert routing.fit.requests == {"sample_weight": None}
 
-    # This class lives in 'third_party.pkg' and therefore doesn't have a
-    # `_auto_request_sample_weight` class attribute.
-    ThirdPartyEstimator = type(
-        "ThirdPartyEstimator",
-        (BaseEstimator,),
-        {"__module__": "third_party.pkg", "fit": fit},
+
+@pytest.mark.parametrize("name, Estimator", all_estimators())
+def test_sklearn_estimators_consuming_sample_weight_auto_request(name, Estimator):
+    """scikit-learn estimators consuming `sample_weight` opt into auto-requesting it
+    by inheriting from `AutoRequestSampleWeightMixin`, and only those do."""
+    accepts_sample_weight = any(
+        "sample_weight" in inspect.signature(getattr(Estimator, method)).parameters
+        for method in SIMPLE_METHODS
+        if hasattr(Estimator, method)
     )
+    has_mixin = issubclass(Estimator, AutoRequestSampleWeightMixin)
+    is_router = (
+        Estimator.get_metadata_routing is not _MetadataRequester.get_metadata_routing
+    )
+    if is_router:
+        # Routers accepting `sample_weight` only use the mixin when they consume it
+        # themselves (through `add_self_request`), which is decided per estimator.
+        assert accepts_sample_weight or not has_mixin, name
+    else:
+        assert accepts_sample_weight == has_mixin, name
 
-    assert "_auto_request_sample_weight" not in ThirdPartyEstimator.__dict__
+
+def test_auto_request_mixin_opts_in():
+    """`AutoRequestMixin(...)` opts third-party estimators into auto-requests of the
+    given metadata, on every method accepting them."""
+
+    class ThirdPartyEstimator(AutoRequestMixin("sample_weight"), BaseEstimator):
+        __module__ = "third_party.pkg"
+
+        def fit(self, X, y, sample_weight=None, groups=None):
+            return self  # pragma: no cover
+
+        def predict(self, X, sample_weight=None):
+            return X  # pragma: no cover
+
+    # The estimator class itself carries nothing; the choice lives in its bases.
+    assert "_auto_requests" not in vars(ThirdPartyEstimator)
 
     with config_context(enable_metadata_auto_requests=True):
         routing = get_routing_for_object(ThirdPartyEstimator())
-        assert routing.fit.requests.get("sample_weight") is None
+        assert routing.fit.requests == {"sample_weight": True, "groups": None}
+        assert routing.predict.requests == {"sample_weight": True}
+
+    with config_context(enable_metadata_auto_requests=False):
+        routing = get_routing_for_object(ThirdPartyEstimator())
+        assert routing.fit.requests == {"sample_weight": None, "groups": None}
 
 
-def test_auto_request_mixin_opts_in_sample_weight():
-    """AutoRequestMixin opts third-party estimators into sample_weight auto-requests."""
-    from sklearn.utils.metadata_routing import AutoRequestMixin
+def test_auto_request_mixin_combines_bases():
+    """Several metadata at once, and mixins found in different bases are combined."""
 
+    class Parent(AutoRequestMixin("sample_weight", "groups"), BaseEstimator):
+        __module__ = "third_party.pkg"
+
+        def fit(self, X, y, sample_weight=None, groups=None, prop=None):
+            return self  # pragma: no cover
+
+    class Child(AutoRequestMixin("prop"), Parent):
+        __module__ = "third_party.pkg"
+
+    with config_context(enable_metadata_auto_requests=True):
+        assert get_routing_for_object(Parent()).fit.requests == {
+            "sample_weight": True,
+            "groups": True,
+            "prop": None,
+        }
+        assert get_routing_for_object(Child()).fit.requests == {
+            "sample_weight": True,
+            "groups": True,
+            "prop": True,
+        }
+
+    # Mixins are created once per set of names, whatever their order.
+    assert AutoRequestMixin("groups", "sample_weight") is AutoRequestMixin(
+        "sample_weight", "groups"
+    )
+
+
+def test_auto_request_mixin_errors():
+    with pytest.raises(TypeError, match="names of the metadata"):
+        AutoRequestMixin()
+
+    with pytest.raises(TypeError, match="names of the metadata"):
+        AutoRequestMixin(1)
+
+
+def test_auto_request_mixin_skeleton_class():
+    # cloudpickle, which joblib uses for classes defined in `__main__`, rebuilds a
+    # class as an empty skeleton and fills in its attributes afterwards. Creating a
+    # subclass of the mixins' base with an empty namespace must therefore work.
+    skeleton = type("AutoRequestMixin('sample_weight')", (_AutoRequestMixin,), {})
+    skeleton._auto_requests = frozenset({"sample_weight"})
+
+    class Est(skeleton, BaseEstimator):
+        __module__ = "third_party.pkg"
+
+        def fit(self, X, y, sample_weight=None):
+            return self  # pragma: no cover
+
+    with config_context(enable_metadata_auto_requests=True):
+        assert get_routing_for_object(Est()).fit.requests == {"sample_weight": True}
+
+
+class _AutoRequestingEstimator(
+    AutoRequestMixin("sample_weight"),  # pyrefly: ignore[invalid-inheritance]
+    BaseEstimator,
+):
     def fit(self, X, y, sample_weight=None):
         return self  # pragma: no cover
 
-    ThirdPartyEstimator = type(
-        "ThirdPartyEstimator",
-        (AutoRequestMixin, BaseEstimator),
-        {"__module__": "third_party.pkg", "fit": fit},
-    )
-    assert ThirdPartyEstimator._auto_request_sample_weight
 
+def test_auto_request_mixin_pickle():
+    """Estimators built on the mixin pickle like any other."""
+    est = pickle.loads(pickle.dumps(_AutoRequestingEstimator()))
     with config_context(enable_metadata_auto_requests=True):
-        routing = get_routing_for_object(ThirdPartyEstimator())
-        assert routing.fit.requests.get("sample_weight") is True
+        assert get_routing_for_object(est).fit.requests == {"sample_weight": True}

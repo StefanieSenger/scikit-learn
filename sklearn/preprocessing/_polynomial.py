@@ -29,6 +29,7 @@ from sklearn.utils._array_api import (
 )
 from sklearn.utils._mask import _get_mask
 from sklearn.utils._param_validation import Interval, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.stats import _weighted_percentile
 from sklearn.utils.validation import (
     FLOAT_DTYPES,
@@ -579,7 +580,7 @@ class PolynomialFeatures(TransformerMixin, BaseEstimator):
         return tags
 
 
-class SplineTransformer(TransformerMixin, BaseEstimator):
+class SplineTransformer(AutoRequestSampleWeightMixin, TransformerMixin, BaseEstimator):
     """Generate univariate B-spline bases for features.
 
     Generate a new feature matrix consisting of

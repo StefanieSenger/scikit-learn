@@ -17,6 +17,7 @@ from sklearn.model_selection import check_cv
 from sklearn.utils import as_float_array, check_array
 from sklearn.utils._param_validation import Interval, StrOptions, validate_params
 from sklearn.utils.metadata_routing import (
+    AutoRequestSampleWeightMixin,
     MetadataRouter,
     MethodMapping,
     _manual_routing,
@@ -655,7 +656,9 @@ def orthogonal_mp_gram(
         return np.squeeze(coef)
 
 
-class OrthogonalMatchingPursuit(RegressorMixin, MultiOutputLinearModel):
+class OrthogonalMatchingPursuit(
+    AutoRequestSampleWeightMixin, RegressorMixin, MultiOutputLinearModel
+):
     """Orthogonal Matching Pursuit model (OMP).
 
     Fits a linear model with constraints imposed on the number of non-zero coefficients

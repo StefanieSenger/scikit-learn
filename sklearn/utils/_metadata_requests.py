@@ -98,6 +98,7 @@ need to override, but it works for simple consumers as is.
 # Authors: The scikit-learn developers
 # SPDX-License-Identifier: BSD-3-Clause
 
+import functools
 import inspect
 from collections import defaultdict, namedtuple
 from copy import deepcopy
@@ -1638,15 +1639,89 @@ class RequestMethod:
         return func
 
 
-class AutoRequestMixin:
+class _AutoRequestMixin:
+    """Base class of the mixins returned by :func:`AutoRequestMixin`."""
+
+
+@functools.lru_cache
+def _parametrize_auto_request_mixin(metadata):
+    """Create, once per set of names, the mixin class ``AutoRequestMixin(...)``."""
+    name = f"AutoRequestMixin({', '.join(map(repr, sorted(metadata)))})"
+    return type(
+        name,
+        (_AutoRequestMixin,),
+        {
+            "_auto_requests": metadata,
+            "__module__": __name__,
+            "__qualname__": name,
+            "__doc__": f"Mixin auto-requesting {sorted(metadata)}, see "
+            ":func:`~sklearn.utils.metadata_routing.AutoRequestMixin`.",
+        },
+    )
+
+
+def AutoRequestMixin(*metadata):
+    """Mixin to auto-request metadata when auto-requests are enabled.
+
+    Use the returned class as a base class, typically to the left of
+    :class:`~sklearn.base.BaseEstimator`. Each of the given metadata is then
+    auto-requested on every method of the estimator which accepts it as a
+    parameter, whenever auto-requests are enabled via :func:`~sklearn.set_config`.
+    The metadata of all such mixins found among the base classes of an estimator
+    are combined.
+
+    scikit-learn's own estimators consuming `sample_weight` inherit from
+    :class:`AutoRequestSampleWeightMixin`, which is this mixin parametrized with
+    ``"sample_weight"``. Estimators that only inherit from
+    :class:`~sklearn.base.BaseEstimator` do not auto-request anything.
+
+    See :ref:`metadata_routing_auto_request` for more details.
+
+    .. versionadded:: 1.10
+
+    Parameters
+    ----------
+    *metadata : str
+        Names of the metadata to auto-request, passed as separate arguments, e.g.
+        ``AutoRequestMixin("sample_weight", "groups")``.
+
+    Returns
+    -------
+    mixin : type
+        The mixin class to inherit from.
+
+    Examples
+    --------
+    >>> from sklearn import config_context
+    >>> from sklearn.base import BaseEstimator
+    >>> from sklearn.utils.metadata_routing import (
+    ...     AutoRequestMixin,
+    ...     get_routing_for_object,
+    ... )
+    >>> class MyEstimator(AutoRequestMixin("sample_weight"), BaseEstimator):
+    ...     def fit(self, X, y, sample_weight=None):
+    ...         return self
+    >>> with config_context(enable_metadata_auto_requests=True):
+    ...     get_routing_for_object(MyEstimator()).fit.requests
+    {'sample_weight': True}
+    """
+    if not metadata or not all(isinstance(name, str) for name in metadata):
+        raise TypeError(
+            "AutoRequestMixin expects the names of the metadata to auto-request as "
+            'strings, e.g. AutoRequestMixin("sample_weight", "groups").'
+        )
+    return _parametrize_auto_request_mixin(frozenset(metadata))
+
+
+class AutoRequestSampleWeightMixin(
+    AutoRequestMixin("sample_weight")  # pyrefly: ignore[invalid-inheritance]
+):
     """Mixin to auto-request `sample_weight` when auto-requests are enabled.
 
-    Inherit from this mixin (typically to the left of
-    :class:`~sklearn.base.BaseEstimator`) to opt into auto-requesting `sample_weight` on
-    methods that accept it. scikit-learn's own estimators get the same policy
-    automatically via their `_auto_request_sample_weight` class attribute;
-    third-party estimators that only inherit from :class:`~sklearn.base.BaseEstimator`
-    do not.
+    This is :func:`AutoRequestMixin` parametrized with ``"sample_weight"``. It is
+    used by scikit-learn's own estimators consuming `sample_weight`, and third-party
+    estimators can inherit from it as well, typically to the left of
+    :class:`~sklearn.base.BaseEstimator`.
 
     See :ref:`metadata_routing_auto_request` for more details.
 
@@ -1654,12 +1729,30 @@ class AutoRequestMixin:
 
     Examples
     --------
-    >>> from sklearn.utils.metadata_routing import AutoRequestMixin
-    >>> AutoRequestMixin._auto_request_sample_weight
-    True
+    >>> from sklearn import config_context
+    >>> from sklearn.base import BaseEstimator
+    >>> from sklearn.utils.metadata_routing import (
+    ...     AutoRequestSampleWeightMixin,
+    ...     get_routing_for_object,
+    ... )
+    >>> class MyEstimator(AutoRequestSampleWeightMixin, BaseEstimator):
+    ...     def fit(self, X, y, sample_weight=None):
+    ...         return self
+    >>> with config_context(enable_metadata_auto_requests=True):
+    ...     get_routing_for_object(MyEstimator()).fit.requests
+    {'sample_weight': True}
     """
 
-    _auto_request_sample_weight = True
+
+def _collect_auto_requests(cls):
+    """Union of the metadata of all ``AutoRequestMixin(...)`` bases of ``cls``."""
+    return frozenset().union(
+        *(
+            vars(base).get("_auto_requests", ())
+            for base in cls.__mro__
+            if issubclass(base, _AutoRequestMixin)
+        )
+    )
 
 
 class _MetadataRequester:
@@ -1744,16 +1837,6 @@ class _MetadataRequester:
             # ``get_metadata_routing`` is called. Here we are going to ignore
             # all the issues and make sure class definition does not fail.
             pass
-
-        # scikit-learn estimators that inherit from `BaseEstimator` auto-request
-        # sample_weight; third-party estimators that only inherit from BaseEstimator do
-        # not.
-        if (
-            cls.__module__.startswith("sklearn.")
-            and "_auto_request_sample_weight" not in cls.__dict__
-            and any(base.__name__ == "BaseEstimator" for base in cls.__mro__[1:])
-        ):
-            cls._auto_request_sample_weight = True
 
         super().__init_subclass__(**kwargs)
 
@@ -1891,16 +1974,14 @@ class _MetadataRequester:
                     ),
                 )
 
-        # This adds auto-requests for `sample_weight` for all consuming methods of
-        # scikit-learn estimators:
-        if (
-            hasattr(self, "_auto_request_sample_weight")
-            and self._auto_request_sample_weight
-        ):
-            for method in SIMPLE_METHODS:
-                method_request = getattr(requests, method)
-                if "sample_weight" in method_request.requests:
-                    method_request.add_auto_request("sample_weight")
+        # Auto-requests come from the class hierarchy: whatever was given to
+        # `AutoRequestMixin(...)` among the bases, see also
+        # `AutoRequestSampleWeightMixin`.
+        auto_requests = _collect_auto_requests(type(self))
+        for method in SIMPLE_METHODS:
+            method_request = getattr(requests, method)
+            for param in sorted(auto_requests.intersection(method_request.requests)):
+                method_request.add_auto_request(param)
 
         return requests
 

@@ -67,6 +67,7 @@ from sklearn.utils.fixes import (
     sp_version,
 )
 from sklearn.utils.metadata_routing import (
+    AutoRequestSampleWeightMixin,
     MetadataRouter,
     MethodMapping,
     _manual_routing,
@@ -1103,7 +1104,11 @@ def _log_reg_scoring_path(
 
 
 class LogisticRegression(
-    CallbackSupportMixin, LinearClassifierMixin, SparseCoefMixin, BaseEstimator
+    AutoRequestSampleWeightMixin,
+    CallbackSupportMixin,
+    LinearClassifierMixin,
+    SparseCoefMixin,
+    BaseEstimator,
 ):
     """
     Logistic Regression (aka logit, MaxEnt) classifier.

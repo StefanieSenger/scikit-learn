@@ -39,6 +39,7 @@ from sklearn.utils import _safe_indexing, check_random_state
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
 from sklearn.utils.extmath import softmax
 from sklearn.utils.metadata_routing import (
+    AutoRequestSampleWeightMixin,
     _raise_for_unsupported_routing,
     _RoutingNotSupportedMixin,
 )
@@ -319,7 +320,10 @@ class BaseWeightBoosting(BaseEnsemble, metaclass=ABCMeta):
 
 
 class AdaBoostClassifier(
-    _RoutingNotSupportedMixin, ClassifierMixin, BaseWeightBoosting
+    AutoRequestSampleWeightMixin,
+    _RoutingNotSupportedMixin,
+    ClassifierMixin,
+    BaseWeightBoosting,
 ):
     """An AdaBoost classifier.
 
@@ -816,7 +820,12 @@ class AdaBoostClassifier(
         return np.log(self.predict_proba(X))
 
 
-class AdaBoostRegressor(_RoutingNotSupportedMixin, RegressorMixin, BaseWeightBoosting):
+class AdaBoostRegressor(
+    AutoRequestSampleWeightMixin,
+    _RoutingNotSupportedMixin,
+    RegressorMixin,
+    BaseWeightBoosting,
+):
     """An AdaBoost regressor.
 
     An AdaBoost [1]_ regressor is a meta-estimator that begins by fitting a

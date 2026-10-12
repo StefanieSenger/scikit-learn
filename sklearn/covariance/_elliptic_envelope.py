@@ -9,10 +9,11 @@ from sklearn.base import OutlierMixin, _fit_context
 from sklearn.covariance._robust_covariance import MinCovDet
 from sklearn.metrics import accuracy_score
 from sklearn.utils._param_validation import Interval
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.validation import check_is_fitted
 
 
-class EllipticEnvelope(OutlierMixin, MinCovDet):
+class EllipticEnvelope(AutoRequestSampleWeightMixin, OutlierMixin, MinCovDet):
     """An object for detecting outliers in a Gaussian distributed dataset.
 
     Read more in the :ref:`User Guide <outlier_detection>`.

@@ -1299,6 +1299,8 @@ API_REFERENCE = {
                     + _get_guide("metadata_routing")
                 ),
                 "autosummary": [
+                    "metadata_routing.AutoRequestMixin",
+                    "metadata_routing.AutoRequestSampleWeightMixin",
                     "metadata_routing.MetadataRequest",
                     "metadata_routing.MetadataRouter",
                     "metadata_routing.MethodMapping",

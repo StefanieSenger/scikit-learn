@@ -45,6 +45,7 @@ from sklearn.utils import (
 )
 from sklearn.utils._missing import is_scalar_nan
 from sklearn.utils._param_validation import Hidden, Interval, RealNotInt, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import (
     _assert_all_finite_element_wise,
@@ -881,7 +882,9 @@ class BaseDecisionTree(MultiOutputMixin, BaseEstimator, metaclass=ABCMeta):
 # =============================================================================
 
 
-class DecisionTreeClassifier(ClassifierMixin, BaseDecisionTree):
+class DecisionTreeClassifier(
+    AutoRequestSampleWeightMixin, ClassifierMixin, BaseDecisionTree
+):
     """A decision tree classifier.
 
     Read more in the :ref:`User Guide <tree>`.
@@ -1298,7 +1301,9 @@ class DecisionTreeClassifier(ClassifierMixin, BaseDecisionTree):
         return tags
 
 
-class DecisionTreeRegressor(RegressorMixin, BaseDecisionTree):
+class DecisionTreeRegressor(
+    AutoRequestSampleWeightMixin, RegressorMixin, BaseDecisionTree
+):
     """A decision tree regressor.
 
     Read more in the :ref:`User Guide <tree>`.

@@ -14,10 +14,13 @@ from sklearn.linear_model._base import LinearModel
 from sklearn.utils import _safe_indexing
 from sklearn.utils._param_validation import Interval, StrOptions
 from sklearn.utils.fixes import _sparse_eye_array
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.validation import _check_sample_weight, validate_data
 
 
-class QuantileRegressor(LinearModel, RegressorMixin, BaseEstimator):
+class QuantileRegressor(
+    AutoRequestSampleWeightMixin, LinearModel, RegressorMixin, BaseEstimator
+):
     """Linear regression model that predicts conditional quantiles.
 
     The linear :class:`QuantileRegressor` optimizes the pinball loss for a

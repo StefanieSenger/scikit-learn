@@ -11,6 +11,7 @@ from sklearn.linear_model._stochastic_gradient import (
 )
 from sklearn.utils import deprecated
 from sklearn.utils._param_validation import Interval, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 
 
 # TODO(1.10): Remove
@@ -19,7 +20,7 @@ from sklearn.utils._param_validation import Interval, StrOptions
     "Use `SGDClassifier(loss='hinge', penalty=None, learning_rate='pa1', eta0=1.0)` "
     "instead."
 )
-class PassiveAggressiveClassifier(BaseSGDClassifier):
+class PassiveAggressiveClassifier(AutoRequestSampleWeightMixin, BaseSGDClassifier):
     """Passive Aggressive Classifier.
 
     .. deprecated:: 1.8
@@ -327,7 +328,7 @@ class PassiveAggressiveClassifier(BaseSGDClassifier):
     "Use `SGDRegressor(loss='epsilon_insensitive', penalty=None, learning_rate='pa1', "
     "eta0 = 1.0)` instead."
 )
-class PassiveAggressiveRegressor(BaseSGDRegressor):
+class PassiveAggressiveRegressor(AutoRequestSampleWeightMixin, BaseSGDRegressor):
     """Passive Aggressive Regressor.
 
     .. deprecated:: 1.8

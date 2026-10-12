@@ -78,7 +78,10 @@ from sklearn.utils._testing import (
     skip_callback_test_if_wasm,
 )
 from sklearn.utils.fixes import CSR_CONTAINERS
-from sklearn.utils.metadata_routing import get_routing_for_object
+from sklearn.utils.metadata_routing import (
+    AutoRequestSampleWeightMixin,
+    get_routing_for_object,
+)
 from sklearn.utils.validation import _check_feature_names, check_is_fitted
 
 # Load a shared tests data sets for the tests in this module. Mark them
@@ -2576,7 +2579,7 @@ def test_sample_weight_routing_auto_request():
     """Test that Pipeline correctly routes `sample_weight` auto-requested in consuming
     estimators."""
 
-    class MyEstimator(BaseEstimator):
+    class MyEstimator(AutoRequestSampleWeightMixin, BaseEstimator):
         def fit(self, X, y, sample_weight=None):
             self.sample_weight_ = sample_weight
             return self

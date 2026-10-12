@@ -20,6 +20,7 @@ from sklearn.exceptions import ConvergenceWarning
 from sklearn.linear_model._base import LinearModel
 from sklearn.utils import check_random_state
 from sklearn.utils._param_validation import Interval
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.parallel import Parallel, delayed
 from sklearn.utils.validation import validate_data
 
@@ -204,7 +205,7 @@ def _lstsq(X, y, indices, fit_intercept):
     return weights
 
 
-class TheilSenRegressor(RegressorMixin, LinearModel):
+class TheilSenRegressor(AutoRequestSampleWeightMixin, RegressorMixin, LinearModel):
     """Theil-Sen Estimator: robust multivariate regression model.
 
     The algorithm calculates least square solutions on subsets with size

@@ -12,6 +12,7 @@ from sklearn.utils._mask import axis0_safe_slice
 from sklearn.utils._param_validation import Interval
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.fixes import _get_additional_lbfgs_options_dict
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.optimize import _check_optimize_result
 from sklearn.utils.validation import _check_sample_weight, validate_data
 
@@ -126,7 +127,9 @@ def _huber_loss_and_gradient(w, X, y, epsilon, alpha, sample_weight=None):
     return loss, grad
 
 
-class HuberRegressor(LinearModel, RegressorMixin, BaseEstimator):
+class HuberRegressor(
+    AutoRequestSampleWeightMixin, LinearModel, RegressorMixin, BaseEstimator
+):
     """L2-regularized linear regression model that is robust to outliers.
 
     The Huber Regressor optimizes the squared loss for the samples where

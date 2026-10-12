@@ -19,6 +19,7 @@ from sklearn.neighbors._kd_tree import KDTree
 from sklearn.utils import check_random_state
 from sklearn.utils._param_validation import Interval, StrOptions
 from sklearn.utils.extmath import row_norms
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.validation import (
     _check_sample_weight,
     check_is_fitted,
@@ -39,7 +40,7 @@ TREE_DICT = {"ball_tree": BallTree, "kd_tree": KDTree}
 
 # TODO: implement a brute force version for testing purposes
 # TODO: create a density estimation base class?
-class KernelDensity(BaseEstimator):
+class KernelDensity(AutoRequestSampleWeightMixin, BaseEstimator):
     """Kernel Density Estimation.
 
     Read more in the :ref:`User Guide <kernel_density>`.

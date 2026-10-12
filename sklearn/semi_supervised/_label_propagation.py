@@ -70,6 +70,7 @@ from sklearn.utils._param_validation import Interval, StrOptions
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.fixes import SCIPY_VERSION_BELOW_1_12
 from sklearn.utils.fixes import laplacian as csgraph_laplacian
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import check_is_fitted, validate_data
 
@@ -343,7 +344,7 @@ class BaseLabelPropagation(ClassifierMixin, BaseEstimator, metaclass=ABCMeta):
         return tags
 
 
-class LabelPropagation(BaseLabelPropagation):
+class LabelPropagation(AutoRequestSampleWeightMixin, BaseLabelPropagation):
     """Label Propagation classifier.
 
     Read more in the :ref:`User Guide <label_propagation>`.
@@ -495,7 +496,7 @@ class LabelPropagation(BaseLabelPropagation):
         return super().fit(X, y)
 
 
-class LabelSpreading(BaseLabelPropagation):
+class LabelSpreading(AutoRequestSampleWeightMixin, BaseLabelPropagation):
     """LabelSpreading model for semi-supervised learning.
 
     This model is similar to the basic Label Propagation algorithm,

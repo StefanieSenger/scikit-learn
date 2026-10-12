@@ -27,6 +27,7 @@ from sklearn.utils._array_api import (
 )
 from sklearn.utils._param_validation import Interval
 from sklearn.utils.extmath import safe_sparse_dot
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.multiclass import _check_partial_fit_first_call
 from sklearn.utils.validation import (
     _check_n_features,
@@ -159,7 +160,7 @@ class _BaseNB(ClassifierMixin, BaseEstimator, metaclass=ABCMeta):
         return xp.exp(self.predict_log_proba(X))
 
 
-class GaussianNB(_BaseNB):
+class GaussianNB(AutoRequestSampleWeightMixin, _BaseNB):
     """
     Gaussian Naive Bayes (GaussianNB).
 
@@ -798,7 +799,7 @@ class _BaseDiscreteNB(_BaseNB):
         return tags
 
 
-class MultinomialNB(_BaseDiscreteNB):
+class MultinomialNB(AutoRequestSampleWeightMixin, _BaseDiscreteNB):
     """
     Naive Bayes classifier for multinomial models.
 
@@ -924,7 +925,7 @@ class MultinomialNB(_BaseDiscreteNB):
         return safe_sparse_dot(X, self.feature_log_prob_.T) + self.class_log_prior_
 
 
-class ComplementNB(_BaseDiscreteNB):
+class ComplementNB(AutoRequestSampleWeightMixin, _BaseDiscreteNB):
     """The Complement Naive Bayes classifier described in Rennie et al. (2003).
 
     The Complement Naive Bayes classifier was designed to correct the "severe
@@ -1075,7 +1076,7 @@ class ComplementNB(_BaseDiscreteNB):
         return jll
 
 
-class BernoulliNB(_BaseDiscreteNB):
+class BernoulliNB(AutoRequestSampleWeightMixin, _BaseDiscreteNB):
     """Naive Bayes classifier for multivariate Bernoulli models.
 
     Like MultinomialNB, this classifier is suitable for discrete data. The
@@ -1243,7 +1244,7 @@ class BernoulliNB(_BaseDiscreteNB):
         return jll
 
 
-class CategoricalNB(_BaseDiscreteNB):
+class CategoricalNB(AutoRequestSampleWeightMixin, _BaseDiscreteNB):
     """Naive Bayes classifier for categorical features.
 
     The categorical Naive Bayes classifier is suitable for classification with

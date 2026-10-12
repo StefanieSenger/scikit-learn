@@ -18,6 +18,7 @@ from sklearn.multiclass import OneVsOneClassifier, OneVsRestClassifier
 from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import check_random_state
 from sklearn.utils._param_validation import Interval, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.optimize import _check_optimize_result
 from sklearn.utils.validation import check_is_fitted, validate_data
 
@@ -511,7 +512,9 @@ class _BinaryGaussianProcessClassifierLaplace(BaseEstimator):
         return theta_opt, func_min
 
 
-class GaussianProcessClassifier(ClassifierMixin, BaseEstimator):
+class GaussianProcessClassifier(
+    AutoRequestSampleWeightMixin, ClassifierMixin, BaseEstimator
+):
     """Gaussian process classification (GPC) based on Laplace approximation.
 
     The implementation is based on Algorithm 3.1, 3.2, and 5.1 from [RW2006]_.

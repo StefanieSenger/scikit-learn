@@ -18,6 +18,7 @@ from sklearn.base import (
 )
 from sklearn.utils import check_random_state
 from sklearn.utils._param_validation import Interval, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.multiclass import class_distribution
 from sklearn.utils.random import _random_choice_csc
 from sklearn.utils.stats import _weighted_percentile
@@ -31,7 +32,9 @@ from sklearn.utils.validation import (
 )
 
 
-class DummyClassifier(MultiOutputMixin, ClassifierMixin, BaseEstimator):
+class DummyClassifier(
+    AutoRequestSampleWeightMixin, MultiOutputMixin, ClassifierMixin, BaseEstimator
+):
     """DummyClassifier makes predictions that ignore the input features.
 
     This classifier serves as a simple baseline to compare against other more
@@ -452,7 +455,9 @@ class DummyClassifier(MultiOutputMixin, ClassifierMixin, BaseEstimator):
         return super().score(X, y, sample_weight)
 
 
-class DummyRegressor(MultiOutputMixin, RegressorMixin, BaseEstimator):
+class DummyRegressor(
+    AutoRequestSampleWeightMixin, MultiOutputMixin, RegressorMixin, BaseEstimator
+):
     """Regressor that makes predictions using simple rules.
 
     This regressor is useful as a simple baseline to compare with other
