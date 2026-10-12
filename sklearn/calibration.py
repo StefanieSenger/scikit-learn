@@ -53,6 +53,7 @@ from sklearn.utils._plotting import (
 from sklearn.utils._response import _get_response_values, _process_predict_proba
 from sklearn.utils.extmath import softmax
 from sklearn.utils.metadata_routing import (
+    AutoRequestSampleWeightMixin,
     MetadataRouter,
     MethodMapping,
     _manual_routing,
@@ -176,7 +177,9 @@ def _get_calibration_logits(estimator, X, *, method, pos_label=None):
     return logits, response_method_used
 
 
-class CalibratedClassifierCV(ClassifierMixin, MetaEstimatorMixin, BaseEstimator):
+class CalibratedClassifierCV(
+    AutoRequestSampleWeightMixin, ClassifierMixin, MetaEstimatorMixin, BaseEstimator
+):
     """Calibrate probabilities using isotonic, sigmoid, or temperature scaling.
 
     This class uses cross-validation to both estimate the parameters of a

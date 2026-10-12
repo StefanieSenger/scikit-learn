@@ -35,6 +35,7 @@ from sklearn.utils._param_validation import (
 from sklearn.utils._sparse import _align_api_if_sparse
 from sklearn.utils.extmath import safe_sparse_dot
 from sklearn.utils.metadata_routing import (
+    AutoRequestSampleWeightMixin,
     _manual_routing,
     _routing_enabled,
     process_routing,
@@ -915,7 +916,7 @@ def enet_path(
 # ElasticNet model
 
 
-class ElasticNet(RegressorMixin, MultiOutputLinearModel):
+class ElasticNet(AutoRequestSampleWeightMixin, RegressorMixin, MultiOutputLinearModel):
     """Linear regression with combined L1 and L2 priors as regularizer.
 
     Minimizes the objective function:
@@ -2048,7 +2049,7 @@ class LinearModelCV(MultiOutputLinearModel, ABC):
         return tags
 
 
-class LassoCV(RegressorMixin, LinearModelCV):
+class LassoCV(AutoRequestSampleWeightMixin, RegressorMixin, LinearModelCV):
     """Lasso linear model with iterative fitting along a regularization path.
 
     See glossary entry for :term:`cross-validation estimator`.
@@ -2296,7 +2297,7 @@ class LassoCV(RegressorMixin, LinearModelCV):
         return super().fit(X, y, sample_weight=sample_weight, **params)
 
 
-class ElasticNetCV(RegressorMixin, LinearModelCV):
+class ElasticNetCV(AutoRequestSampleWeightMixin, RegressorMixin, LinearModelCV):
     """Elastic Net model with iterative fitting along a regularization path.
 
     See glossary entry for :term:`cross-validation estimator`.
@@ -3012,7 +3013,9 @@ class MultiTaskLasso(MultiTaskElasticNet):
         self.selection = selection
 
 
-class MultiTaskElasticNetCV(RegressorMixin, LinearModelCV):
+class MultiTaskElasticNetCV(
+    AutoRequestSampleWeightMixin, RegressorMixin, LinearModelCV
+):
     """Multi-task L1/L2 ElasticNet with built-in cross-validation.
 
     See glossary entry for :term:`cross-validation estimator`.
@@ -3225,7 +3228,7 @@ class MultiTaskElasticNetCV(RegressorMixin, LinearModelCV):
         return True
 
 
-class MultiTaskLassoCV(RegressorMixin, LinearModelCV):
+class MultiTaskLassoCV(AutoRequestSampleWeightMixin, RegressorMixin, LinearModelCV):
     """Multi-task Lasso model trained with L1/L2 mixed-norm as regularizer.
 
     See glossary entry for :term:`cross-validation estimator`.

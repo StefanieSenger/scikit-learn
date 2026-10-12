@@ -18,13 +18,17 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.utils import get_tags
 from sklearn.utils._available_if import available_if
 from sklearn.utils._param_validation import Interval, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.sparsefuncs import csc_median_axis_0
 from sklearn.utils.validation import check_is_fitted, validate_data
 
 
 class NearestCentroid(
-    DiscriminantAnalysisPredictionMixin, ClassifierMixin, BaseEstimator
+    AutoRequestSampleWeightMixin,
+    DiscriminantAnalysisPredictionMixin,
+    ClassifierMixin,
+    BaseEstimator,
 ):
     """Nearest centroid classifier.
 

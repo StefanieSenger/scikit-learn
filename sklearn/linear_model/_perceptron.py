@@ -5,9 +5,10 @@ from numbers import Real
 
 from sklearn.linear_model._stochastic_gradient import BaseSGDClassifier
 from sklearn.utils._param_validation import Interval, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 
 
-class Perceptron(BaseSGDClassifier):
+class Perceptron(AutoRequestSampleWeightMixin, BaseSGDClassifier):
     """Linear perceptron classifier.
 
     The implementation is a wrapper around :class:`~sklearn.linear_model.SGDClassifier`

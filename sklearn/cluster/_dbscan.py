@@ -16,6 +16,7 @@ from sklearn.cluster._dbscan_inner import dbscan_inner
 from sklearn.metrics.pairwise import _VALID_METRICS
 from sklearn.neighbors import NearestNeighbors, sort_graph_by_row_values
 from sklearn.utils._param_validation import Interval, StrOptions, validate_params
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.validation import _check_sample_weight, validate_data
 
 
@@ -196,7 +197,7 @@ def dbscan(
     return est.core_sample_indices_, est.labels_
 
 
-class DBSCAN(ClusterMixin, BaseEstimator):
+class DBSCAN(AutoRequestSampleWeightMixin, ClusterMixin, BaseEstimator):
     """Perform DBSCAN clustering from vector array or distance matrix.
 
     DBSCAN - Density-Based Spatial Clustering of Applications with Noise.

@@ -11,6 +11,7 @@ from sklearn.base import BaseEstimator, MultiOutputMixin, RegressorMixin, _fit_c
 from sklearn.linear_model._ridge import _solve_cholesky_kernel
 from sklearn.metrics.pairwise import PAIRWISE_KERNEL_FUNCTIONS, pairwise_kernels
 from sklearn.utils._param_validation import Interval, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.validation import (
     _check_sample_weight,
     check_is_fitted,
@@ -18,7 +19,9 @@ from sklearn.utils.validation import (
 )
 
 
-class KernelRidge(MultiOutputMixin, RegressorMixin, BaseEstimator):
+class KernelRidge(
+    AutoRequestSampleWeightMixin, MultiOutputMixin, RegressorMixin, BaseEstimator
+):
     """Kernel ridge regression.
 
     Kernel ridge regression (KRR) combines ridge regression (linear least

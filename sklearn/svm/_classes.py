@@ -18,6 +18,7 @@ from sklearn.svm._base import (
     _get_liblinear_solver_type,
 )
 from sklearn.utils._param_validation import Interval, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import _num_samples, validate_data
 
@@ -41,7 +42,9 @@ def _validate_dual_parameter(dual, loss, penalty, multi_class, X):
         return dual
 
 
-class LinearSVC(LinearClassifierMixin, SparseCoefMixin, BaseEstimator):
+class LinearSVC(
+    AutoRequestSampleWeightMixin, LinearClassifierMixin, SparseCoefMixin, BaseEstimator
+):
     """Linear Support Vector Classification.
 
     Similar to SVC with parameter kernel='linear', but implemented in terms of
@@ -360,7 +363,7 @@ class LinearSVC(LinearClassifierMixin, SparseCoefMixin, BaseEstimator):
         return tags
 
 
-class LinearSVR(RegressorMixin, LinearModel):
+class LinearSVR(AutoRequestSampleWeightMixin, RegressorMixin, LinearModel):
     """Linear Support Vector Regression.
 
     Similar to SVR with parameter kernel='linear', but implemented in terms of
@@ -610,7 +613,7 @@ class LinearSVR(RegressorMixin, LinearModel):
         return tags
 
 
-class SVC(BaseSVC):
+class SVC(AutoRequestSampleWeightMixin, BaseSVC):
     """C-Support Vector Classification.
 
     The implementation is based on libsvm. The fit time scales at least
@@ -886,7 +889,7 @@ class SVC(BaseSVC):
         )
 
 
-class NuSVC(BaseSVC):
+class NuSVC(AutoRequestSampleWeightMixin, BaseSVC):
     """Nu-Support Vector Classification.
 
     Similar to SVC but uses a parameter to control the number of support
@@ -1145,7 +1148,7 @@ class NuSVC(BaseSVC):
         )
 
 
-class SVR(RegressorMixin, BaseLibSVM):
+class SVR(AutoRequestSampleWeightMixin, RegressorMixin, BaseLibSVM):
     """Epsilon-Support Vector Regression.
 
     The free parameters in the model are C and epsilon.
@@ -1335,7 +1338,7 @@ class SVR(RegressorMixin, BaseLibSVM):
         )
 
 
-class NuSVR(RegressorMixin, BaseLibSVM):
+class NuSVR(AutoRequestSampleWeightMixin, RegressorMixin, BaseLibSVM):
     """Nu Support Vector Regression.
 
     Similar to NuSVC, for regression, uses a parameter nu to control
@@ -1518,7 +1521,7 @@ class NuSVR(RegressorMixin, BaseLibSVM):
         )
 
 
-class OneClassSVM(OutlierMixin, BaseLibSVM):
+class OneClassSVM(AutoRequestSampleWeightMixin, OutlierMixin, BaseLibSVM):
     """Unsupervised Outlier Detection.
 
     Estimate the support of a high-dimensional distribution.

@@ -38,6 +38,7 @@ from sklearn.utils._param_validation import (
     StrOptions,
     validate_params,
 )
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.parallel import Parallel, delayed
 from sklearn.utils.validation import validate_data
 
@@ -920,7 +921,7 @@ def _lars_path_solver(
 # Estimator classes
 
 
-class Lars(RegressorMixin, MultiOutputLinearModel):
+class Lars(AutoRequestSampleWeightMixin, RegressorMixin, MultiOutputLinearModel):
     """Least Angle Regression model aka LAR.
 
     Read more in the :ref:`User Guide <least_angle_regression>`.

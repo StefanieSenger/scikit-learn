@@ -41,6 +41,7 @@ from sklearn.utils._seq_dataset import (
     CSRDataset64,
 )
 from sklearn.utils.extmath import safe_sparse_dot
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.parallel import Parallel, delayed
 from sklearn.utils.sparsefuncs import mean_variance_axis
 from sklearn.utils.validation import (
@@ -516,7 +517,9 @@ class SparseCoefMixin:
         return self
 
 
-class LinearRegression(RegressorMixin, MultiOutputLinearModel):
+class LinearRegression(
+    AutoRequestSampleWeightMixin, RegressorMixin, MultiOutputLinearModel
+):
     """
     Ordinary least squares Linear Regression.
 

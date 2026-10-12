@@ -71,6 +71,7 @@ from sklearn.utils import (
 )
 from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
 from sklearn.utils._tags import get_tags
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.multiclass import check_classification_targets, type_of_target
 from sklearn.utils.parallel import Parallel, delayed
 from sklearn.utils.validation import (
@@ -1169,7 +1170,7 @@ class ForestRegressor(RegressorMixin, BaseForest, metaclass=ABCMeta):
         return tags
 
 
-class RandomForestClassifier(ForestClassifier):
+class RandomForestClassifier(AutoRequestSampleWeightMixin, ForestClassifier):
     """
     A random forest classifier.
 
@@ -1554,7 +1555,7 @@ class RandomForestClassifier(ForestClassifier):
         self.ccp_alpha = ccp_alpha
 
 
-class RandomForestRegressor(ForestRegressor):
+class RandomForestRegressor(AutoRequestSampleWeightMixin, ForestRegressor):
     """
     A random forest regressor.
 
@@ -1919,7 +1920,7 @@ class RandomForestRegressor(ForestRegressor):
         self.monotonic_cst = monotonic_cst
 
 
-class ExtraTreesClassifier(ForestClassifier):
+class ExtraTreesClassifier(AutoRequestSampleWeightMixin, ForestClassifier):
     """
     An extra-trees classifier.
 
@@ -2291,7 +2292,7 @@ class ExtraTreesClassifier(ForestClassifier):
         self.monotonic_cst = monotonic_cst
 
 
-class ExtraTreesRegressor(ForestRegressor):
+class ExtraTreesRegressor(AutoRequestSampleWeightMixin, ForestRegressor):
     """
     An extra-trees regressor.
 
@@ -2636,7 +2637,7 @@ class ExtraTreesRegressor(ForestRegressor):
         self.monotonic_cst = monotonic_cst
 
 
-class RandomTreesEmbedding(TransformerMixin, BaseForest):
+class RandomTreesEmbedding(AutoRequestSampleWeightMixin, TransformerMixin, BaseForest):
     """
     An ensemble of totally random trees.
 

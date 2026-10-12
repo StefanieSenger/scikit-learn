@@ -16,9 +16,12 @@ from sklearn.neighbors._base import (
     _get_weights,
 )
 from sklearn.utils._param_validation import StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 
 
-class KNeighborsRegressor(KNeighborsMixin, RegressorMixin, NeighborsBase):
+class KNeighborsRegressor(
+    AutoRequestSampleWeightMixin, KNeighborsMixin, RegressorMixin, NeighborsBase
+):
     """Regression based on k-nearest neighbors.
 
     The target is predicted by local interpolation of the targets
@@ -271,7 +274,9 @@ class KNeighborsRegressor(KNeighborsMixin, RegressorMixin, NeighborsBase):
         return y_pred
 
 
-class RadiusNeighborsRegressor(RadiusNeighborsMixin, RegressorMixin, NeighborsBase):
+class RadiusNeighborsRegressor(
+    AutoRequestSampleWeightMixin, RadiusNeighborsMixin, RegressorMixin, NeighborsBase
+):
     """Regression based on neighbors within a fixed radius.
 
     The target is predicted by local interpolation of the targets

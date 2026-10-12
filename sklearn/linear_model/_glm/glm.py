@@ -38,6 +38,7 @@ from sklearn.utils._array_api import (
 from sklearn.utils._openmp_helpers import _openmp_effective_n_threads
 from sklearn.utils._param_validation import Hidden, Interval, StrOptions
 from sklearn.utils.fixes import _get_additional_lbfgs_options_dict
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.optimize import _check_optimize_result, _newton_cg
 from sklearn.utils.validation import (
     _check_sample_weight,
@@ -587,7 +588,7 @@ class _GeneralizedLinearRegressor(RegressorMixin, BaseEstimator):
         return HalfSquaredError()
 
 
-class PoissonRegressor(_GeneralizedLinearRegressor):
+class PoissonRegressor(AutoRequestSampleWeightMixin, _GeneralizedLinearRegressor):
     """Generalized Linear Model with a Poisson distribution.
 
     This regressor uses the 'log' link function.
@@ -781,7 +782,7 @@ class PoissonRegressor(_GeneralizedLinearRegressor):
         return tags
 
 
-class GammaRegressor(_GeneralizedLinearRegressor):
+class GammaRegressor(AutoRequestSampleWeightMixin, _GeneralizedLinearRegressor):
     """Generalized Linear Model with a Gamma distribution.
 
     This regressor uses the 'log' link function.
@@ -968,7 +969,7 @@ class GammaRegressor(_GeneralizedLinearRegressor):
         return HalfGammaLoss()
 
 
-class TweedieRegressor(_GeneralizedLinearRegressor):
+class TweedieRegressor(AutoRequestSampleWeightMixin, _GeneralizedLinearRegressor):
     """Generalized Linear Model with a Tweedie distribution.
 
     This estimator can be used to model different GLMs depending on the

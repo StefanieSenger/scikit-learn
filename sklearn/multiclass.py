@@ -52,6 +52,7 @@ from sklearn.utils import check_random_state
 from sklearn.utils._param_validation import HasMethods, Interval
 from sklearn.utils._tags import get_tags
 from sklearn.utils.metadata_routing import (
+    AutoRequestSampleWeightMixin,
     MetadataRouter,
     MethodMapping,
     _raise_for_params,
@@ -200,6 +201,7 @@ def _estimators_has(attr):
 
 
 class OneVsRestClassifier(
+    AutoRequestSampleWeightMixin,
     MultiOutputMixin,
     ClassifierMixin,
     MetaEstimatorMixin,
@@ -666,7 +668,9 @@ def _partial_fit_ovo_binary(estimator, X, y, i, j, partial_fit_params):
     return estimator
 
 
-class OneVsOneClassifier(MetaEstimatorMixin, ClassifierMixin, BaseEstimator):
+class OneVsOneClassifier(
+    AutoRequestSampleWeightMixin, MetaEstimatorMixin, ClassifierMixin, BaseEstimator
+):
     """One-vs-one multiclass strategy.
 
     This strategy consists in fitting one classifier per class pair.

@@ -23,13 +23,16 @@ from sklearn.gaussian_process.kernels import ConstantKernel as C
 from sklearn.preprocessing._data import _handle_zeros_in_scale
 from sklearn.utils import check_random_state
 from sklearn.utils._param_validation import Interval, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.optimize import _check_optimize_result
 from sklearn.utils.validation import validate_data
 
 GPR_CHOLESKY_LOWER = True
 
 
-class GaussianProcessRegressor(MultiOutputMixin, RegressorMixin, BaseEstimator):
+class GaussianProcessRegressor(
+    AutoRequestSampleWeightMixin, MultiOutputMixin, RegressorMixin, BaseEstimator
+):
     """Gaussian process regression (GPR).
 
     The implementation is based on Algorithm 2.1 of [RW2006]_.

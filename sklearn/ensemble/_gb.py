@@ -52,6 +52,7 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.tree._tree import TREE_LEAF
 from sklearn.utils import check_array, check_random_state, column_or_1d
 from sklearn.utils._param_validation import HasMethods, Hidden, Interval, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.stats import _weighted_percentile
 from sklearn.utils.validation import (
@@ -1118,7 +1119,9 @@ class BaseGradientBoosting(BaseEnsemble, metaclass=ABCMeta):
         return tags
 
 
-class GradientBoostingClassifier(ClassifierMixin, BaseGradientBoosting):
+class GradientBoostingClassifier(
+    AutoRequestSampleWeightMixin, ClassifierMixin, BaseGradientBoosting
+):
     """Gradient Boosting for classification.
 
     This algorithm builds an additive model in a forward stage-wise fashion; it
@@ -1707,7 +1710,9 @@ class GradientBoostingClassifier(ClassifierMixin, BaseGradientBoosting):
             ) from e
 
 
-class GradientBoostingRegressor(RegressorMixin, BaseGradientBoosting):
+class GradientBoostingRegressor(
+    AutoRequestSampleWeightMixin, RegressorMixin, BaseGradientBoosting
+):
     """Gradient Boosting for regression.
 
     This estimator builds an additive model in a forward stage-wise fashion; it

@@ -11,6 +11,7 @@ from sklearn.base import BaseEstimator, TransformerMixin, _fit_context
 from sklearn.preprocessing._encoders import OneHotEncoder
 from sklearn.utils import resample
 from sklearn.utils._param_validation import Interval, Options, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.stats import _weighted_percentile
 from sklearn.utils.validation import (
     _check_feature_names_in,
@@ -21,7 +22,7 @@ from sklearn.utils.validation import (
 )
 
 
-class KBinsDiscretizer(TransformerMixin, BaseEstimator):
+class KBinsDiscretizer(AutoRequestSampleWeightMixin, TransformerMixin, BaseEstimator):
     """
     Bin continuous data into intervals.
 

@@ -39,6 +39,7 @@ from sklearn.model_selection import ShuffleSplit, StratifiedShuffleSplit
 from sklearn.utils import check_random_state, compute_class_weight
 from sklearn.utils._param_validation import Hidden, Interval, StrOptions
 from sklearn.utils.extmath import safe_sparse_dot
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.metaestimators import available_if
 from sklearn.utils.multiclass import _check_partial_fit_first_call
 from sklearn.utils.parallel import Parallel, delayed
@@ -955,7 +956,7 @@ class BaseSGDClassifier(LinearClassifierMixin, BaseSGD, metaclass=ABCMeta):
         return tags
 
 
-class SGDClassifier(BaseSGDClassifier):
+class SGDClassifier(AutoRequestSampleWeightMixin, BaseSGDClassifier):
     """Linear classifiers (SVM, logistic regression, etc.) with SGD training.
 
     This estimator implements regularized linear models with stochastic
@@ -1781,7 +1782,7 @@ class BaseSGDRegressor(RegressorMixin, BaseSGD):
         return tags
 
 
-class SGDRegressor(BaseSGDRegressor):
+class SGDRegressor(AutoRequestSampleWeightMixin, BaseSGDRegressor):
     """Linear model fitted by minimizing a regularized empirical loss with SGD.
 
     SGD stands for Stochastic Gradient Descent: the gradient of the loss is
@@ -2086,7 +2087,7 @@ class SGDRegressor(BaseSGDRegressor):
         )
 
 
-class SGDOneClassSVM(OutlierMixin, BaseSGD):
+class SGDOneClassSVM(AutoRequestSampleWeightMixin, OutlierMixin, BaseSGD):
     """Solves linear One-Class SVM using Stochastic Gradient Descent.
 
     This implementation is meant to be used with a kernel approximation

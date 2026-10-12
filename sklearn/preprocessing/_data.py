@@ -38,6 +38,7 @@ from sklearn.utils._param_validation import (
 )
 from sklearn.utils._sparse import _align_api_if_sparse
 from sklearn.utils.extmath import _incremental_mean_and_var, row_norms
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.sparsefuncs import (
     incr_mean_variance_axis,
     inplace_column_scale,
@@ -722,7 +723,11 @@ def minmax_scale(X, feature_range=(0, 1), *, axis=0, copy=True):
 
 
 class StandardScaler(
-    CallbackSupportMixin, OneToOneFeatureMixin, TransformerMixin, BaseEstimator
+    AutoRequestSampleWeightMixin,
+    CallbackSupportMixin,
+    OneToOneFeatureMixin,
+    TransformerMixin,
+    BaseEstimator,
 ):
     """Standardize features by removing the mean and scaling to unit variance.
 
@@ -2610,7 +2615,9 @@ def add_dummy_feature(X, value=1.0):
         return np.hstack((np.full((n_samples, 1), value), X))
 
 
-class QuantileTransformer(OneToOneFeatureMixin, TransformerMixin, BaseEstimator):
+class QuantileTransformer(
+    AutoRequestSampleWeightMixin, OneToOneFeatureMixin, TransformerMixin, BaseEstimator
+):
     """Transform features using quantiles information.
 
     This method transforms the features to follow a uniform or a normal

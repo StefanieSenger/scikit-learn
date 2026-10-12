@@ -43,6 +43,7 @@ from sklearn.utils import check_random_state, compute_sample_weight, resample
 from sklearn.utils._missing import is_scalar_nan
 from sklearn.utils._openmp_helpers import _openmp_effective_n_threads
 from sklearn.utils._param_validation import Interval, RealNotInt, StrOptions
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.multiclass import check_classification_targets
 from sklearn.utils.validation import (
     _check_categorical_features,
@@ -1375,7 +1376,9 @@ class BaseHistGradientBoosting(BaseEstimator, ABC):
         return requests
 
 
-class HistGradientBoostingRegressor(RegressorMixin, BaseHistGradientBoosting):
+class HistGradientBoostingRegressor(
+    AutoRequestSampleWeightMixin, RegressorMixin, BaseHistGradientBoosting
+):
     """Histogram-based Gradient Boosting Regression Tree.
 
     This estimator is much faster than
@@ -1766,7 +1769,9 @@ class HistGradientBoostingRegressor(RegressorMixin, BaseHistGradientBoosting):
             return _LOSSES[self.loss](sample_weight=sample_weight)
 
 
-class HistGradientBoostingClassifier(ClassifierMixin, BaseHistGradientBoosting):
+class HistGradientBoostingClassifier(
+    AutoRequestSampleWeightMixin, ClassifierMixin, BaseHistGradientBoosting
+):
     """Histogram-based Gradient Boosting Classification Tree.
 
     This estimator is much faster than

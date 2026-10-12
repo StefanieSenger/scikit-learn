@@ -31,6 +31,7 @@ from sklearn.utils._array_api import (
 from sklearn.utils._encode import _encode
 from sklearn.utils._param_validation import HasMethods, Interval, StrOptions
 from sklearn.utils.extmath import softmax
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.multiclass import check_classification_targets, unique_labels
 from sklearn.utils.validation import check_is_fitted, validate_data
 
@@ -257,6 +258,7 @@ class DiscriminantAnalysisPredictionMixin:
 
 
 class LinearDiscriminantAnalysis(
+    AutoRequestSampleWeightMixin,
     ClassNamePrefixFeaturesOutMixin,
     LinearClassifierMixin,
     TransformerMixin,
@@ -850,7 +852,10 @@ class LinearDiscriminantAnalysis(
 
 
 class QuadraticDiscriminantAnalysis(
-    DiscriminantAnalysisPredictionMixin, ClassifierMixin, BaseEstimator
+    AutoRequestSampleWeightMixin,
+    DiscriminantAnalysisPredictionMixin,
+    ClassifierMixin,
+    BaseEstimator,
 ):
     """Quadratic Discriminant Analysis.
 

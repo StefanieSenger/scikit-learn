@@ -53,6 +53,7 @@ from sklearn.utils._param_validation import Interval, StrOptions, validate_param
 from sklearn.utils.extmath import row_norms, safe_sparse_dot
 from sklearn.utils.fixes import _sparse_linalg_cg
 from sklearn.utils.metadata_routing import (
+    AutoRequestSampleWeightMixin,
     MetadataRouter,
     MethodMapping,
     _manual_routing,
@@ -1005,7 +1006,7 @@ class _BaseRidge(LinearModel, metaclass=ABCMeta):
         return self
 
 
-class Ridge(MultiOutputMixin, RegressorMixin, _BaseRidge):
+class Ridge(AutoRequestSampleWeightMixin, MultiOutputMixin, RegressorMixin, _BaseRidge):
     """Linear least squares with l2 regularization.
 
     Minimizes the objective function::
@@ -1359,7 +1360,7 @@ class _RidgeClassifierMixin(LinearClassifierMixin):
         return get_scorer("accuracy")
 
 
-class RidgeClassifier(_RidgeClassifierMixin, _BaseRidge):
+class RidgeClassifier(AutoRequestSampleWeightMixin, _RidgeClassifierMixin, _BaseRidge):
     """Classifier using Ridge regression.
 
     This classifier first converts the target values into ``{-1, 1}`` and
@@ -2598,7 +2599,9 @@ class _BaseRidgeCV(LinearModel):
         return tags
 
 
-class RidgeCV(MultiOutputMixin, RegressorMixin, _BaseRidgeCV):
+class RidgeCV(
+    AutoRequestSampleWeightMixin, MultiOutputMixin, RegressorMixin, _BaseRidgeCV
+):
     """Ridge regression with built-in cross-validation.
 
     See glossary entry for :term:`cross-validation estimator`.
@@ -2802,7 +2805,9 @@ class RidgeCV(MultiOutputMixin, RegressorMixin, _BaseRidgeCV):
         return get_scorer("r2")
 
 
-class RidgeClassifierCV(_RidgeClassifierMixin, _BaseRidgeCV):
+class RidgeClassifierCV(
+    AutoRequestSampleWeightMixin, _RidgeClassifierMixin, _BaseRidgeCV
+):
     """Ridge classifier with built-in cross-validation.
 
     See glossary entry for :term:`cross-validation estimator`.

@@ -16,6 +16,7 @@ from sklearn.base import BaseEstimator, RegressorMixin, TransformerMixin, _fit_c
 from sklearn.utils import check_array, check_consistent_length, metadata_routing
 from sklearn.utils._param_validation import Interval, StrOptions, validate_params
 from sklearn.utils.fixes import parse_version, sp_base_version
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.validation import _check_sample_weight, check_is_fitted
 
 __all__ = ["IsotonicRegression", "check_increasing", "isotonic_regression"]
@@ -178,7 +179,9 @@ def isotonic_regression(
     return y
 
 
-class IsotonicRegression(RegressorMixin, TransformerMixin, BaseEstimator):
+class IsotonicRegression(
+    AutoRequestSampleWeightMixin, RegressorMixin, TransformerMixin, BaseEstimator
+):
     """Isotonic regression model.
 
     Read more in the :ref:`User Guide <isotonic>`.

@@ -24,6 +24,7 @@ from sklearn.neighbors._base import (
 from sklearn.utils._param_validation import StrOptions
 from sklearn.utils.arrayfuncs import _all_with_any_reduction_axis_1
 from sklearn.utils.extmath import weighted_mode
+from sklearn.utils.metadata_routing import AutoRequestSampleWeightMixin
 from sklearn.utils.validation import (
     _is_arraylike,
     _num_samples,
@@ -41,7 +42,9 @@ def _adjusted_metric(metric, metric_kwargs, p=None):
     return metric, metric_kwargs
 
 
-class KNeighborsClassifier(KNeighborsMixin, ClassifierMixin, NeighborsBase):
+class KNeighborsClassifier(
+    AutoRequestSampleWeightMixin, KNeighborsMixin, ClassifierMixin, NeighborsBase
+):
     """Classifier implementing the k-nearest neighbors vote.
 
     Read more in the :ref:`User Guide <classification>`.
@@ -454,7 +457,9 @@ class KNeighborsClassifier(KNeighborsMixin, ClassifierMixin, NeighborsBase):
         return tags
 
 
-class RadiusNeighborsClassifier(RadiusNeighborsMixin, ClassifierMixin, NeighborsBase):
+class RadiusNeighborsClassifier(
+    AutoRequestSampleWeightMixin, RadiusNeighborsMixin, ClassifierMixin, NeighborsBase
+):
     """Classifier implementing a vote among neighbors within a given radius.
 
     Read more in the :ref:`User Guide <classification>`.
